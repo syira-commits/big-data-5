@@ -1,8 +1,5 @@
-streamlit
-pandas
+streamlit==1.38.0
 numpy==1.23.5
-plotly
-matplotlib
-scikit-learn
-ultralytics==8.0.196
+pandas
 opencv-python-headless==4.8.0.76
+pillow
