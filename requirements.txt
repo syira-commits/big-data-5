@@ -4,3 +4,4 @@ numpy
 plotly
 matplotlib
 scikit-learn
+ultralytics==8.0.196
