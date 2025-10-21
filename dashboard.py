@@ -64,12 +64,23 @@ if uploaded_file is not None:
             img_array = img_array / 255.0
 
             prediction = classifier.predict(img_array)
-            class_index = np.argmax(prediction)
-            confidence = np.max(prediction)
 
-            st.success("🎊 Prediksi Berhasil!")
-            st.write("**Hasil Prediksi:**", f"Kategori ke-{class_index}")
-            st.write("**Probabilitas:**", f"{confidence:.2f}")
+# Kalau model output-nya 1 neuron (sigmoid)
+if prediction.shape[-1] == 1:
+    prob = prediction[0][0]
+    label = "Uninfected" if prob > 0.5 else "Parasitized"
+    confidence = prob if prob > 0.5 else 1 - prob
+
+# Kalau model output-nya lebih dari 1 neuron (softmax)
+else:
+    class_names = ["Parasitized", "Uninfected"]  # urutan sesuai training
+    class_index = np.argmax(prediction)
+    label = class_names[class_index]
+    confidence = np.max(prediction)
+
+st.success("🎊 Prediksi Berhasil!")
+st.write("**Hasil Prediksi:**", label)
+st.write("**Probabilitas:**", f"{confidence:.2f}")
 
 else:
     st.info("Silakan unggah gambar terlebih dahulu 💡")
