@@ -38,10 +38,9 @@ if uploaded_file is not None:
     if menu == "🎯 Deteksi Objek (YOLO)":
         with st.spinner("🐱 Sedang mendeteksi objek... tunggu sebentar ya!"):
             results = yolo_model(img)
-            result_img = results[0].plot()  # hasil deteksi
+            result_img = results[0].plot()
             st.image(result_img, caption="🎉 Hasil Deteksi!", use_container_width=True)
 
-            # Tampilkan data hasil deteksi
             data = results[0].boxes.data.cpu().numpy()
             if len(data) > 0:
                 st.subheader("📋 Detail Deteksi")
@@ -65,22 +64,21 @@ if uploaded_file is not None:
 
             prediction = classifier.predict(img_array)
 
-# Kalau model output-nya 1 neuron (sigmoid)
-if prediction.shape[-1] == 1:
-    prob = prediction[0][0]
-    label = "Uninfected" if prob > 0.5 else "Parasitized"
-    confidence = prob if prob > 0.5 else 1 - prob
+            # ==== Bagian ini HARUS di dalam blok ====
+            if prediction.shape[-1] == 1:
+                prob = prediction[0][0]
+                label = "Uninfected" if prob > 0.5 else "Parasitized"
+                confidence = prob if prob > 0.5 else 1 - prob
+            else:
+                class_names = ["Parasitized", "Uninfected"]
+                class_index = np.argmax(prediction)
+                label = class_names[class_index]
+                confidence = np.max(prediction)
+            # ========================================
 
-# Kalau model output-nya lebih dari 1 neuron (softmax)
-else:
-    class_names = ["Parasitized", "Uninfected"]  # urutan sesuai training
-    class_index = np.argmax(prediction)
-    label = class_names[class_index]
-    confidence = np.max(prediction)
-
-st.success("🎊 Prediksi Berhasil!")
-st.write("**Hasil Prediksi:**", label)
-st.write("**Probabilitas:**", f"{confidence:.2f}")
+            st.success("🎊 Prediksi Berhasil!")
+            st.write("**Hasil Prediksi:**", label)
+            st.write("**Probabilitas:**", f"{confidence:.2f}")
 
 else:
     st.info("Silakan unggah gambar terlebih dahulu 💡")
