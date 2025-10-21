@@ -35,26 +35,41 @@ if uploaded_file is not None:
     img = Image.open(uploaded_file)
     st.image(img, caption="✨ Gambar yang Diupload ✨", use_container_width=True)
 
+    # ==========================
+    # MODE DETEKSI YOLO
+    # ==========================
     if menu == "🎯 Deteksi Objek (YOLO)":
-        with st.spinner("🐱 Sedang mendeteksi objek... tunggu sebentar ya!"):
-            results = yolo_model(img)
-            result_img = results[0].plot()
-            st.image(result_img, caption="🎉 Hasil Deteksi!", use_container_width=True)
+        st.subheader("⚙️ Pengaturan Deteksi")
+        detect_option = st.checkbox("Aktifkan deteksi objek YOLO", value=True,
+                                    help="Nonaktifkan jika ingin melewati proses deteksi (misalnya gambar tidak termasuk objek YOLO).")
 
-            data = results[0].boxes.data.cpu().numpy()
-            if len(data) > 0:
-                st.subheader("📋 Detail Deteksi")
-                st.dataframe({
-                    "Class": [results[0].names[int(cls)] for cls in data[:, 5]],
-                    "Confidence": [round(conf, 2) for conf in data[:, 4]],
-                    "X": data[:, 0],
-                    "Y": data[:, 1],
-                    "Width": data[:, 2],
-                    "Height": data[:, 3]
-                })
-            else:
-                st.warning("Tidak ada objek yang terdeteksi 😿")
+        if detect_option:
+            with st.spinner("🐱 Sedang mendeteksi objek... tunggu sebentar ya!"):
+                results = yolo_model(img, conf=0.1, iou=0.3)
 
+                boxes = results[0].boxes
+                if boxes is not None and len(boxes) > 0:
+                    result_img = results[0].plot(line_width=2, font_size=12)
+                    st.image(result_img, caption="🎉 Hasil Deteksi!", use_container_width=True)
+
+                    st.subheader("📋 Detail Deteksi")
+                    data = boxes.data.cpu().numpy()
+                    st.dataframe({
+                        "Class": [results[0].names[int(cls)] for cls in data[:, 5]],
+                        "Confidence": [round(conf, 2) for conf in data[:, 4]],
+                        "X_min": data[:, 0],
+                        "Y_min": data[:, 1],
+                        "X_max": data[:, 2],
+                        "Y_max": data[:, 3]
+                    })
+                else:
+                    st.warning("Tidak ada objek yang terdeteksi 😿")
+        else:
+            st.info("Deteksi YOLO dimatikan. Tidak ada bounding box yang ditampilkan.")
+
+    # ==========================
+    # MODE KLASIFIKASI GAMBAR
+    # ==========================
     elif menu == "🧩 Klasifikasi Gambar":
         with st.spinner("🐶 Sedang memprediksi jenis gambar..."):
             img_resized = img.resize((128, 128))
