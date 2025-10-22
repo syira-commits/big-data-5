@@ -43,34 +43,41 @@ if uploaded_file is not None:
     # ==========================
     if menu == "🎯 Deteksi Objek (YOLO)":
         with st.spinner("🐱 Sedang mendeteksi objek... tunggu sebentar ya!"):
-
-            # --- Langkah 1: Cek apakah gambar kemungkinan besar teks/grafik ---
+            # Konversi ke OpenCV
             img_cv = np.array(img.convert("RGB"))
             gray = cv2.cvtColor(img_cv, cv2.COLOR_RGB2GRAY)
             edges = cv2.Canny(gray, 100, 200)
             edge_density = np.sum(edges > 0) / (gray.shape[0] * gray.shape[1])
 
-            # Jika edge terlalu padat (banyak garis rapat = teks/grafik), skip YOLO
+            # Jika gambar terlalu banyak garis (biasanya teks/grafik)
             if edge_density > 0.12:
                 st.warning("📄 Gambar terdeteksi sebagai teks/grafik — tidak ada objek yang relevan 💤")
             else:
-                # --- Langkah 2: Jalankan YOLO ---
+                # Jalankan YOLO
                 results = yolo_model(img)
-                data = results[0].boxes.data.cpu().numpy() if results[0].boxes is not None else np.array([])
-
+                boxes = results[0].boxes
+                data = boxes.data.cpu().numpy() if boxes is not None else np.array([])
                 names = results[0].names
-                allowed_labels = ["cocopham", "sprite"]
 
+                allowed_labels = ["cocopham", "sprite"]
                 filtered = []
+
                 if len(data) > 0:
                     for box in data:
-                        cls_id = int(box[5])
-                        conf = float(box[4])
-                        label = names.get(cls_id, "Unknown")
-                        if label in allowed_labels and conf > 0.5:
-                            filtered.append((label, conf, box))
+                        x1, y1, x2, y2, conf, cls_id = box
+                        label = names.get(int(cls_id), "Unknown")
+                        area = (x2 - x1) * (y2 - y1)
+                        img_area = gray.shape[0] * gray.shape[1]
 
-                # --- Langkah 3: Tampilkan hasil ---
+                        # Validasi agar hanya hasil relevan yang diterima
+                        if (
+                            label in allowed_labels
+                            and conf > 0.6  # Confidence ketat
+                            and 0.02 < area / img_area < 0.8  # Ukuran area wajar
+                        ):
+                            filtered.append((label, float(conf), (x1, y1, x2, y2)))
+
+                # --- Hasil Akhir ---
                 if len(filtered) == 0:
                     st.warning("😿 Tidak ada objek terdeteksi (hanya mendeteksi Cocopham & Sprite)")
                 else:
@@ -95,6 +102,7 @@ if uploaded_file is not None:
 
             prediction = classifier.predict(img_array)
 
+            # Tentukan hasil
             if prediction.shape[-1] == 1:
                 prob = prediction[0][0]
                 label = "Uninfected" if prob > 0.5 else "Parasitized"
@@ -110,7 +118,7 @@ if uploaded_file is not None:
             st.write("*Probabilitas:*", f"{confidence:.2f}")
 
 else:
-    st.info("💡 Silakan unggah gambar terlebih dahulu untuk mulai deteksi atau klasifikasi.")
+    st.info("Silakan unggah gambar terlebih dahulu 💡")
 
 # ==========================
 # Footer lucu
