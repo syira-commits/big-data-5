@@ -41,7 +41,7 @@ if uploaded_file is not None:
     # ==========================
     # MODE DETEKSI OBJEK
     # ==========================
-        if menu == "🎯 Deteksi Objek (YOLO)":
+    if menu == "🎯 Deteksi Objek (YOLO)":
         with st.spinner("🐱 Sedang mendeteksi objek... tunggu sebentar ya!"):
 
             # --- Langkah 1: Cek apakah gambar kemungkinan besar teks/grafik ---
@@ -52,7 +52,7 @@ if uploaded_file is not None:
 
             # Jika edge terlalu padat (banyak garis rapat = teks/grafik), skip YOLO
             if edge_density > 0.12:
-                st.warning("Gambar terdeteksi sebagai teks/grafik — tidak ada objek yang relevan 💤")
+                st.warning("📄 Gambar terdeteksi sebagai teks/grafik — tidak ada objek yang relevan 💤")
             else:
                 # --- Langkah 2: Jalankan YOLO ---
                 results = yolo_model(img)
@@ -72,7 +72,7 @@ if uploaded_file is not None:
 
                 # --- Langkah 3: Tampilkan hasil ---
                 if len(filtered) == 0:
-                    st.warning("Tidak ada objek terdeteksi 😿 (hanya mendeteksi Cocopham & Sprite)")
+                    st.warning("😿 Tidak ada objek terdeteksi (hanya mendeteksi Cocopham & Sprite)")
                 else:
                     annotated_img = results[0].plot()
                     st.image(annotated_img, caption="🎉 Hasil Deteksi!", use_container_width=True)
@@ -110,7 +110,7 @@ if uploaded_file is not None:
             st.write("*Probabilitas:*", f"{confidence:.2f}")
 
 else:
-    st.info("Silakan unggah gambar terlebih dahulu 💡")
+    st.info("💡 Silakan unggah gambar terlebih dahulu untuk mulai deteksi atau klasifikasi.")
 
 # ==========================
 # Footer lucu
