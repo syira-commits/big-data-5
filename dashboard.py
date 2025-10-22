@@ -118,7 +118,7 @@ with col1:
         st.image(img, caption="✨ Gambar yang Diupload ✨", use_container_width=True)
 
         # ==========================
-        # MODE DETEKSI YOLO
+        # MODE DETEKSI YOLO (versi fix)
         # ==========================
         if menu == "🎯 Deteksi Objek (YOLO)":
             st.subheader("⚙️ Pengaturan Deteksi")
@@ -128,10 +128,19 @@ with col1:
                 with st.spinner("🔍 Sedang mendeteksi objek..."):
                     results = yolo_model(img, conf=0.25, iou=0.3)
                     boxes = results[0].boxes
-                    if boxes is not None and len(boxes) > 0:
+
+                    # 🔎 Cek apakah ada objek terdeteksi
+                    if boxes is None or len(boxes) == 0:
+                        st.markdown("<div class='result-card theme-mint'>", unsafe_allow_html=True)
+                        st.warning("🚫 Tidak ada objek yang terdeteksi.")
+                        st.image(img, caption="Hasil: Tidak ada deteksi", use_container_width=True)
+                        st.markdown("</div>", unsafe_allow_html=True)
+                    else:
+                        # Jika ada objek, tampilkan hasil deteksi lengkap
                         result_img = results[0].plot(line_width=2, font_size=12)
                         st.markdown("<div class='result-card theme-mint'>", unsafe_allow_html=True)
-                        st.image(result_img, caption="🎉 Hasil Deteksi", use_container_width=True)
+                        st.image(result_img, caption="🎯 Hasil Deteksi", use_container_width=True)
+
                         data = boxes.data.cpu().numpy()
                         st.dataframe({
                             "Class": [results[0].names[int(cls)] for cls in data[:, 5]],
@@ -142,10 +151,8 @@ with col1:
                             "Y_max": data[:, 3]
                         })
                         st.markdown("</div>", unsafe_allow_html=True)
-                    else:
-                        st.warning("Tidak ada objek yang terdeteksi.")
             else:
-                st.info("Deteksi YOLO dimatikan.")
+                st.info("🕹️ Deteksi YOLO dimatikan.")
 
         # ==========================
         # MODE KLASIFIKASI GAMBAR
