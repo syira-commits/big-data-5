@@ -6,6 +6,7 @@ from tensorflow.keras.preprocessing import image
 import numpy as np
 from PIL import Image
 import time
+import cv2
 
 # ==========================
 # 🔹 Setup environment 
@@ -51,7 +52,7 @@ st.set_page_config(page_title="SmartVision", layout="wide")
 
 # Judul berwarna biru
 st.markdown(
-    '<h2 style="background-color:#1E90FF;color:white;padding:10px;border-radius:10px;text-align:center;">🍴🔍 SmartVision: Deteksi & Klasifikasi Gambar Cerdas</h2>',
+    '<h2 style="background-color:#1E90FF;color:white;padding:10px;border-radius:10px;text-align:center;">🥤🔍 SmartVision: Deteksi & Klasifikasi Gambar Cerdas</h2>',
     unsafe_allow_html=True
 )
 
@@ -61,8 +62,8 @@ st.markdown(
 Selamat datang di SmartVision, aplikasi berbasis kecerdasan buatan yang siap membantu kamu menganalisis gambar secara otomatis! 🤖  
 Aplikasi ini memiliki dua fitur unggulan:
 
-- 🍽 Deteksi Objek (YOLO) → Mengenali keberadaan sendok dan garpu dalam gambar secara cepat dan akurat.  
-- 🧱 Klasifikasi Gambar (CNN) → Membedakan antara retakan dan permukaan normal menggunakan teknologi deep learning.
+- 🥤 Deteksi Objek (YOLO) → Mengenali keberadaan minuman **Cocopham** dan **Sprite** dalam gambar secara cepat dan akurat.  
+- 🦠 Klasifikasi Gambar (CNN) → Membedakan antara sel **Uninfected** dan **Parasitized** menggunakan teknologi deep learning.
 
 Unggah gambar favoritmu dan biarkan AI bekerja! 🚀
 """
@@ -72,7 +73,7 @@ Unggah gambar favoritmu dan biarkan AI bekerja! 🚀
 # Sidebar
 # ==========================
 st.sidebar.markdown('<div style="background-color:#1E90FF;padding:10px;border-radius:10px;text-align:center;font-weight:bold;">Pilih Mode Analisis</div>', unsafe_allow_html=True)
-menu = st.sidebar.selectbox("", ["Deteksi Sendok & Garpu (YOLO)", "Klasifikasi Retakan (CNN)"])
+menu = st.sidebar.selectbox("", ["Deteksi Minuman (YOLO)", "Klasifikasi Sel (CNN)"])
 
 st.sidebar.markdown('<div style="background-color:#1E90FF;padding:10px;border-radius:10px;text-align:center;font-weight:bold;">Unggah Gambar (1-2)</div>', unsafe_allow_html=True)
 st.sidebar.button("🔄 Refresh", on_click=refresh_dashboard)
@@ -117,7 +118,7 @@ if uploaded_files:
         st.session_state.preview_imgs.append(preview_img)
 
         # Proses prediksi
-        if menu == "Deteksi Sendok & Garpu (YOLO)":
+        if menu == "Deteksi Minuman (YOLO)":
             loading_animation("Mendeteksi objek")
             results = yolo_model(img)
             result_img = results[0].plot()
@@ -129,21 +130,21 @@ if uploaded_files:
             for box in results[0].boxes:
                 cls = int(box.cls)
                 label = yolo_model.names[cls] if hasattr(yolo_model,'names') else f"Kelas {cls}"
-                conf = float(box.conf)  # Pastikan float agar tidak error
+                conf = float(box.conf)
                 labels.append(f"{label} (Conf: {conf:.2f})")
 
             if not labels:
                 labels.append("Tidak ada objek terdeteksi")
             st.session_state.result_labels.append(labels)
 
-        elif menu == "Klasifikasi Retakan (CNN)":
+        elif menu == "Klasifikasi Sel (CNN)":
             loading_animation("Memprediksi gambar")
             target_size = classifier.input_shape[1:3]
             img_resized = img.resize(target_size)
             img_array = image.img_to_array(img_resized)
             img_array = np.expand_dims(img_array, axis=0)/255.0
-            prediction = float(classifier.predict(img_array)[0][0])  # Convert ke float
-            predicted_label = "Retakan" if prediction>=0.5 else "Bukan Retakan"
+            prediction = float(classifier.predict(img_array)[0][0])
+            predicted_label = "Parasitized" if prediction>=0.5 else "Uninfected"
             confidence = prediction if prediction>=0.5 else 1 - prediction
 
             display_resized = img_resized.copy()
@@ -176,18 +177,20 @@ if st.session_state.result_imgs:
             col.markdown(f"{label_text}")
         
         # 🎨 Kata-kata kreatif muncul *di bawah gambar hasil*
-        if menu == "Deteksi Sendok & Garpu (YOLO)":
+        if menu == "Deteksi Minuman (YOLO)":
             for box_text in st.session_state.result_labels[i]:
-                if "sendok" in box_text.lower():
-                    col.markdown("🥄 Wah, ada sendok elegan di sini! Siap menyendok makanan lezat 🍜")
-                elif "garpu" in box_text.lower():
-                    col.markdown("🍴 Terlihat garpu tajam nan gagah siap menemani sendoknya ✨")
-        elif menu == "Klasifikasi Retakan (CNN)":
+                if "cocopham" in box_text.lower():
+                    col.markdown("🥥 Ditemukan **Cocopham** segar! Siap menghilangkan dahaga 🌴")
+                elif "sprite" in box_text.lower():
+                    col.markdown("🥤 Ada **Sprite** dingin nan menyegarkan! Siap menemani harimu 💚")
+                elif "tidak ada objek" in box_text.lower():
+                    col.markdown("😿 Tidak ada objek terdeteksi pada gambar ini.")
+        elif menu == "Klasifikasi Sel (CNN)":
             label_text_full = st.session_state.result_labels[i][0]
-            if "retakan" in label_text_full.lower() and "bukan" not in label_text_full.lower():
-                col.markdown("🧱 Terlihat ada retakan! Mungkin waktunya perbaikan 💥")
+            if "parasitized" in label_text_full.lower():
+                col.markdown("🦠 Ditemukan sel **Parasitized** — hati-hati, ada tanda infeksi! ⚠️")
             else:
-                col.markdown("✅ Permukaannya halus dan kuat, tidak ada retakan berarti 💪")
+                col.markdown("✅ Sel terlihat **Uninfected**, sehat dan normal 💪")
 
 # ==========================
 # Pesan jika belum upload
