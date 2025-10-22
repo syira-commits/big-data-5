@@ -11,10 +11,9 @@ import cv2
 # ==========================
 @st.cache_resource
 def load_models():
-    # Model deteksi custom dan umum
-    yolo_custom = YOLO("model/Mulya Syira_Laporan 4.pt")  # model custom kamu
-    yolo_general = YOLO("yolov8n.pt")  # model umum dari COCO dataset
-    classifier = tf.keras.models.load_model("model/Mulya Syira_Laporan2.h5")  # model CNN
+    yolo_custom = YOLO("model/Mulya Syira_Laporan 4.pt")
+    yolo_general = YOLO("yolov8n.pt")
+    classifier = tf.keras.models.load_model("model/Mulya Syira_Laporan2.h5")
     return yolo_custom, yolo_general, classifier
 
 yolo_custom, yolo_general, classifier = load_models()
@@ -25,45 +24,20 @@ yolo_custom, yolo_general, classifier = load_models()
 st.set_page_config(page_title="Deteksi dan Klasifikasi Gambar", page_icon="📷", layout="wide")
 
 # ==========================
-# Custom CSS (Pastel Theme)
+# Custom CSS
 # ==========================
 st.markdown("""
 <style>
-body {
-    background-color: #FFFDFB;
-    font-family: 'Poppins', sans-serif;
-}
-[data-testid="stSidebar"] {
-    background-color: #FFF7F3;
-    border-right: 1px solid #F2E7DC;
-}
+body {background-color: #FFFDFB; font-family: 'Poppins', sans-serif;}
+[data-testid="stSidebar"] {background-color: #FFF7F3; border-right: 1px solid #F2E7DC;}
 .main-title {font-size: 2.3rem; font-weight: 700; color: #2D2D2D;}
 .subtext {font-size: 1rem; color: #555; margin-bottom: 2rem;}
-.upload-box {
-    background-color: #FFFFFF;
-    border: 2px dashed #E5E7EB;
-    border-radius: 16px;
-    padding: 2rem;
-    text-align: center;
-    box-shadow: 0 4px 8px rgba(0,0,0,0.05);
-}
-.result-card {
-    background-color: #FFFFFF;
-    border-radius: 18px;
-    padding: 1.5rem;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.07);
-    margin-top: 1.5rem;
-}
-.result-card:hover {
-    transform: scale(1.01);
-    transition: 0.3s;
-}
-.footer {
-    text-align: center;
-    color: #888;
-    font-size: 0.9rem;
-    margin-top: 3rem;
-}
+.upload-box {background-color: #FFFFFF; border: 2px dashed #E5E7EB; border-radius: 16px;
+padding: 2rem; text-align: center; box-shadow: 0 4px 8px rgba(0,0,0,0.05);}
+.result-card {background-color: #FFFFFF; border-radius: 18px; padding: 1.5rem;
+box-shadow: 0 4px 12px rgba(0,0,0,0.07); margin-top: 1.5rem;}
+.result-card:hover {transform: scale(1.01); transition: 0.3s;}
+.footer {text-align: center; color: #888; font-size: 0.9rem; margin-top: 3rem;}
 .theme-peach {border-left: 8px solid #FFD8C2;}
 .theme-lilac {border-left: 8px solid #E4D7FF;}
 .theme-mint {border-left: 8px solid #C9F5D7;}
@@ -119,55 +93,41 @@ with col1:
         # MODE DETEKSI OBJEK (YOLO)
         # ==========================
         if menu == "🎯 Deteksi Objek (YOLO)":
-            detect_option = st.checkbox("Aktifkan Deteksi YOLO", value=True)
+            with st.spinner("🔍 Sedang mendeteksi objek..."):
+                img_array = np.array(img)
+                model_yolo = yolo_custom if "Custom" in model_choice else yolo_general
 
-            if detect_option:
-                with st.spinner("🔍 Sedang mendeteksi objek..."):
-                    img_array = np.array(img)
+                results = model_yolo.predict(source=img_array, conf=conf_thresh, iou=iou_thresh, verbose=False)
+                boxes = results[0].boxes
 
-                    # Pilih model sesuai sidebar
-                    model_yolo = yolo_custom if "Custom" in model_choice else yolo_general
+                if boxes is None or len(boxes) == 0:
+                    st.warning("🚫 Tidak ada objek yang terdeteksi.")
+                    st.image(img, caption="Hasil: Tidak ada deteksi", use_container_width=True)
+                else:
+                    st.success("✅ Objek terdeteksi!")
+                    st.image(results[0].plot(), caption="Hasil Deteksi YOLO", use_container_width=True)
 
-                    # Jalankan deteksi
-                    results = model_yolo(img_array, conf=conf_thresh, iou=iou_thresh)
-                    boxes = results[0].boxes
-
-                    if boxes is None or len(boxes) == 0:
-                        st.warning("🚫 Tidak ada objek yang terdeteksi.")
-                        st.image(img, caption="Hasil: Tidak ada deteksi", use_container_width=True)
-                    else:
-                        data = boxes.data.cpu().numpy()
-                        data = data[data[:, 4] > conf_thresh]
-
-                        if len(data) == 0:
-                            st.warning(f"🚫 Tidak ada objek dengan confidence ≥ {conf_thresh:.2f}.")
-                            st.image(img, caption="Hasil: Tidak ada deteksi valid", use_container_width=True)
-                        else:
-                            st.success("✅ Objek terdeteksi!")
-                            st.image(results[0].plot(), caption="Hasil Deteksi YOLO", use_container_width=True)
-
-                            st.dataframe({
-                                "Class": [results[0].names[int(cls)] for cls in data[:, 5]],
-                                "Confidence": [round(conf, 2) for conf in data[:, 4]],
-                                "X_min": data[:, 0],
-                                "Y_min": data[:, 1],
-                                "X_max": data[:, 2],
-                                "Y_max": data[:, 3]
-                            })
-            else:
-                st.info("🕹 Deteksi YOLO dimatikan.")
+                    data = boxes.data.cpu().numpy()
+                    st.dataframe({
+                        "Class": [results[0].names[int(cls)] for cls in data[:, 5]],
+                        "Confidence": [round(conf, 2) for conf in data[:, 4]],
+                        "X_min": data[:, 0],
+                        "Y_min": data[:, 1],
+                        "X_max": data[:, 2],
+                        "Y_max": data[:, 3]
+                    })
 
         # ==========================
-        # MODE KLASIFIKASI GAMBAR
+        # MODE KLASIFIKASI GAMBAR (CNN)
         # ==========================
         elif menu == "🧩 Klasifikasi Gambar":
             with st.spinner("🧠 Sedang memprediksi jenis gambar..."):
-                img_resized = img.resize((128, 128))
+                img_resized = img.resize((128, 128))  # ukuran sesuai model CNN kamu
                 img_array = image.img_to_array(img_resized)
-                img_array = np.expand_dims(img_array, axis=0)
-                img_array = img_array / 255.0
+                img_array = np.expand_dims(img_array, axis=0) / 255.0
 
                 prediction = classifier.predict(img_array)
+
                 if prediction.shape[-1] == 1:
                     prob = prediction[0][0]
                     label = "Uninfected" if prob > 0.5 else "Parasitized"
@@ -183,7 +143,6 @@ with col1:
                 st.write("Hasil Prediksi:", label)
                 st.write("Probabilitas:", f"{confidence:.2f}")
                 st.markdown("</div>", unsafe_allow_html=True)
-
     else:
         st.markdown("<div class='upload-box'>📤 Silakan unggah gambar terlebih dahulu 💡</div>", unsafe_allow_html=True)
 
