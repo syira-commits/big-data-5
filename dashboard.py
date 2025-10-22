@@ -117,7 +117,7 @@ with col1:
         st.image(img, caption="✨ Gambar yang Diupload ✨", use_container_width=True)
 
         # ==========================
-        # MODE DETEKSI YOLO (TANPA BOUNDING BOX)
+        # MODE DETEKSI YOLO (FIX)
         # ==========================
         if menu == "🎯 Deteksi Objek (YOLO)":
             st.subheader("⚙️ Pengaturan Deteksi")
@@ -129,13 +129,16 @@ with col1:
                     boxes = results[0].boxes
 
                     if boxes is None or len(boxes) == 0:
+                        # 🚫 Tidak ada objek
                         st.markdown("<div class='result-card theme-mint'>", unsafe_allow_html=True)
                         st.warning("🚫 Tidak ada objek yang terdeteksi.")
                         st.image(img, caption="Hasil: Tidak ada deteksi", use_container_width=True)
                         st.markdown("</div>", unsafe_allow_html=True)
                     else:
+                        # ✅ Ada objek → tampilkan bounding box
                         st.markdown("<div class='result-card theme-mint'>", unsafe_allow_html=True)
-                        st.image(img, caption="✅ Objek terdeteksi (tanpa bounding box)", use_container_width=True)
+                        annotated_frame = results[0].plot()
+                        st.image(annotated_frame, caption="✅ Hasil Deteksi dengan Bounding Box", use_container_width=True)
 
                         data = boxes.data.cpu().numpy()
                         st.dataframe({
