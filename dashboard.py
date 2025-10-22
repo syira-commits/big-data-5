@@ -20,26 +20,26 @@ yolo_model, classifier = load_models()
 # ==========================
 # Setup Page
 # ==========================
-st.set_page_config(page_title="CuteVision App", page_icon="🐾", layout="wide")
+st.set_page_config(page_title="Dashboard AI Lucu", page_icon="🐾", layout="wide")
 
 # ==========================
-# Custom CSS untuk tampilan pastel modern
+# Custom CSS (tema pastel cerah)
 # ==========================
 st.markdown("""
 <style>
 body {
-    background-color: #FFF8FB;
+    background-color: #FFFDFB;
     font-family: 'Poppins', sans-serif;
 }
 [data-testid="stSidebar"] {
-    background-color: #FAF9F6;
+    background-color: #FFFBF5;
     border-right: 1px solid #EEE;
 }
 h1, h2, h3 {
     font-weight: 600;
 }
 .main-title {
-    font-size: 2.5rem;
+    font-size: 2.2rem;
     font-weight: 700;
     color: #1E1E1E;
     margin-bottom: 0.5rem;
@@ -50,7 +50,7 @@ h1, h2, h3 {
     margin-bottom: 2rem;
 }
 .upload-box {
-    background-color: white;
+    background-color: #FFFFFF;
     border: 2px dashed #E5E7EB;
     border-radius: 16px;
     padding: 2rem;
@@ -58,11 +58,12 @@ h1, h2, h3 {
     box-shadow: 0 4px 8px rgba(0,0,0,0.05);
 }
 .result-card {
-    background-color: white;
+    background-color: #FFFFFF;
     border-radius: 18px;
     padding: 1.5rem;
     box-shadow: 0 4px 12px rgba(0,0,0,0.07);
     margin-top: 1.5rem;
+    border-left: 8px solid #FFDFD3; /* pastel peach */
 }
 .result-card:hover {
     transform: scale(1.01);
@@ -74,16 +75,20 @@ h1, h2, h3 {
     font-size: 0.9rem;
     margin-top: 3rem;
 }
+.theme-peach {border-left: 8px solid #FFDFD3;}
+.theme-lilac {border-left: 8px solid #E2D7F5;}
+.theme-mint {border-left: 8px solid #C6F1D6;}
+.theme-butter {border-left: 8px solid #FFF5B8;}
 </style>
 """, unsafe_allow_html=True)
 
 # ==========================
 # Sidebar
 # ==========================
-st.sidebar.header("🐾 Mode CuteVision")
+st.sidebar.header("🐾 Mode Analisis")
 menu = st.sidebar.radio("🌈 Pilih Mode:", ["🎯 Deteksi Objek (YOLO)", "🧩 Klasifikasi Gambar"])
 st.sidebar.markdown("---")
-st.sidebar.info("Unggah gambar dan lihat keajaiban AI bekerja!")
+st.sidebar.info("Unggah gambar dan biarkan AI bekerja dengan cerdas tapi lembut.")
 
 # ==========================
 # Layout Utama
@@ -91,10 +96,10 @@ st.sidebar.info("Unggah gambar dan lihat keajaiban AI bekerja!")
 col1, col2 = st.columns([2.3, 1.2])
 
 with col1:
-    st.markdown("<div class='main-title'>CuteVision App — Deteksi & Klasifikasi Gambar Lucu</div>", unsafe_allow_html=True)
-    st.markdown("<div class='subtext'>Aplikasi ini menggunakan <b>YOLO</b> untuk mendeteksi objek dan <b>CNN (TensorFlow)</b> untuk mengklasifikasi gambar. Cocok untuk kamu yang suka hal-hal lucu tapi tetap cerdas!</div>", unsafe_allow_html=True)
+    st.markdown("<div class='main-title'>Invest in your exploration</div>", unsafe_allow_html=True)
+    st.markdown("<div class='subtext'>Gunakan teknologi <b>YOLO</b> untuk deteksi objek dan <b>CNN (TensorFlow)</b> untuk klasifikasi gambar. Cukup unggah gambar dan lihat hasil analisisnya secara instan.</div>", unsafe_allow_html=True)
 
-    uploaded_file = st.file_uploader("📤 Unggah Gambar Lucumu di Sini", type=["jpg", "jpeg", "png"])
+    uploaded_file = st.file_uploader("📤 Unggah Gambar di Sini", type=["jpg", "jpeg", "png"])
 
     if uploaded_file is not None:
         img = Image.open(uploaded_file)
@@ -108,12 +113,12 @@ with col1:
             detect_option = st.checkbox("Aktifkan deteksi objek YOLO", value=True)
 
             if detect_option:
-                with st.spinner("🐱 Sedang mendeteksi objek... tunggu sebentar ya!"):
+                with st.spinner("🔍 Sedang mendeteksi objek..."):
                     results = yolo_model(img, conf=0.25, iou=0.3)
                     boxes = results[0].boxes
                     if boxes is not None and len(boxes) > 0:
                         result_img = results[0].plot(line_width=2, font_size=12)
-                        st.markdown("<div class='result-card'>", unsafe_allow_html=True)
+                        st.markdown("<div class='result-card theme-mint'>", unsafe_allow_html=True)
                         st.image(result_img, caption="🎉 Hasil Deteksi!", use_container_width=True)
                         data = boxes.data.cpu().numpy()
                         st.dataframe({
@@ -126,15 +131,15 @@ with col1:
                         })
                         st.markdown("</div>", unsafe_allow_html=True)
                     else:
-                        st.warning("Tidak ada objek yang terdeteksi 😿")
+                        st.warning("Tidak ada objek yang terdeteksi.")
             else:
-                st.info("Deteksi YOLO dimatikan. Tidak ada bounding box yang ditampilkan.")
+                st.info("Deteksi YOLO dimatikan.")
 
         # ==========================
         # MODE KLASIFIKASI GAMBAR
         # ==========================
         elif menu == "🧩 Klasifikasi Gambar":
-            with st.spinner("🐶 Sedang memprediksi jenis gambar..."):
+            with st.spinner("🧠 Sedang memprediksi jenis gambar..."):
                 img_resized = img.resize((128, 128))
                 img_array = image.img_to_array(img_resized)
                 img_array = np.expand_dims(img_array, axis=0)
@@ -151,8 +156,8 @@ with col1:
                     label = class_names[class_index]
                     confidence = np.max(prediction)
 
-                st.markdown("<div class='result-card'>", unsafe_allow_html=True)
-                st.success("🎊 Prediksi Berhasil!")
+                st.markdown("<div class='result-card theme-lilac'>", unsafe_allow_html=True)
+                st.success("✅ Prediksi Selesai")
                 st.write("**Hasil Prediksi:**", label)
                 st.write("**Probabilitas:**", f"{confidence:.2f}")
                 st.markdown("</div>", unsafe_allow_html=True)
@@ -161,12 +166,12 @@ with col1:
 
 with col2:
     st.markdown("### 📈 Informasi Model")
-    st.markdown("<div class='result-card'><b>YOLOv8:</b> Deteksi objek cepat & akurat.<br><b>CNN:</b> Klasifikasi citra lucu.<br><br><b>Confidence Threshold:</b> 0.25<br><b>IoU:</b> 0.3</div>", unsafe_allow_html=True)
+    st.markdown("<div class='result-card theme-butter'><b>YOLOv8:</b> Deteksi objek cepat & akurat.<br><b>CNN:</b> Klasifikasi citra.<br><br><b>Confidence Threshold:</b> 0.25<br><b>IoU:</b> 0.3</div>", unsafe_allow_html=True)
 
-    st.markdown("### 💡 Tips")
-    st.markdown("<div class='result-card'>🖼️ Gunakan gambar dengan resolusi jelas.<br>🐾 Coba bandingkan hasil YOLO dan CNN.<br>📊 Eksperimen dengan berbagai objek lucu!</div>", unsafe_allow_html=True)
+    st.markdown("### 💡 Tips Penggunaan")
+    st.markdown("<div class='result-card theme-peach'>🖼️ Gunakan gambar dengan resolusi jelas.<br>🐾 Coba bandingkan hasil YOLO dan CNN.<br>📊 Eksperimen dengan berbagai objek menarik!</div>", unsafe_allow_html=True)
 
 # ==========================
-# Footer lucu
+# Footer
 # ==========================
-st.markdown("<div class='footer'>🐾 Dibuat oleh <b>Mulya Syira</b> — Dashboard lucu tapi cerdas menggunakan Streamlit, YOLO & TensorFlow.</div>", unsafe_allow_html=True)
+st.markdown("<div class='footer'>🐾 Dibuat oleh <b>Mulya Syira</b> — Dashboard AI dengan sentuhan pastel yang lembut dan cerdas.</div>", unsafe_allow_html=True)
