@@ -36,25 +36,15 @@ body {
     background-color: #FFF6F0;
     border-right: 1px solid #F3E9E2;
 }
-h1, h2, h3 { font-weight: 600; }
 .main-title {
     font-size: 2.3rem;
     font-weight: 700;
     color: #2D2D2D;
-    margin-bottom: 0.5rem;
 }
 .subtext {
     font-size: 1rem;
     color: #555;
     margin-bottom: 2rem;
-}
-.upload-box {
-    background-color: #FFFFFF;
-    border: 2px dashed #E5E7EB;
-    border-radius: 16px;
-    padding: 2rem;
-    text-align: center;
-    box-shadow: 0 4px 8px rgba(0,0,0,0.05);
 }
 .result-card {
     background-color: #FFFFFF;
@@ -63,32 +53,22 @@ h1, h2, h3 { font-weight: 600; }
     box-shadow: 0 4px 12px rgba(0,0,0,0.08);
     margin-top: 1.5rem;
 }
-.result-card:hover {
-    transform: scale(1.01);
-    transition: 0.3s;
+.theme-peach {border-left: 8px solid #FFD8C2;}
+.theme-lilac {border-left: 8px solid #E4D7FF;}
+.theme-mint {border-left: 8px solid #C9F5D7;}
+.theme-butter {border-left: 8px solid #FFF5B8;}
+.upload-box {
+    background-color: #FFFFFF;
+    border: 2px dashed #E5E7EB;
+    border-radius: 16px;
+    padding: 2rem;
+    text-align: center;
 }
 .footer {
     text-align: center;
     color: #666;
     font-size: 0.9rem;
     margin-top: 3rem;
-}
-.theme-peach {border-left: 8px solid #FFD8C2;}
-.theme-lilac {border-left: 8px solid #E4D7FF;}
-.theme-mint {border-left: 8px solid #C9F5D7;}
-.theme-butter {border-left: 8px solid #FFF5B8;}
-[data-testid="stButton"] > button {
-    background: linear-gradient(90deg, #FFD8C2, #E4D7FF);
-    color: #2D2D2D;
-    border: none;
-    border-radius: 12px;
-    padding: 0.5rem 1rem;
-    font-weight: 600;
-}
-[data-testid="stButton"] > button:hover {
-    background: linear-gradient(90deg, #FFC6AA, #DCC8FF);
-    transform: scale(1.02);
-    transition: 0.2s;
 }
 </style>
 """, unsafe_allow_html=True)
@@ -102,17 +82,17 @@ st.sidebar.markdown("---")
 st.sidebar.info("Unggah gambar dan biarkan AI menganalisis dengan cerdas dan lembut.")
 
 # ==========================
-# Layout Utama
+# Layout
 # ==========================
 col1, col2 = st.columns([2.3, 1.2])
 
 with col1:
     st.markdown("<div class='main-title'>Deteksi dan Klasifikasi Gambar</div>", unsafe_allow_html=True)
-    st.markdown("<div class='subtext'>Gunakan teknologi <b>YOLOv8</b> untuk deteksi objek dan <b>CNN (TensorFlow)</b> untuk klasifikasi gambar. Unggah gambar, lalu lihat hasil analisis secara instan.</div>", unsafe_allow_html=True)
+    st.markdown("<div class='subtext'>Gunakan <b>YOLOv8</b> untuk deteksi objek & <b>CNN</b> untuk klasifikasi gambar.</div>", unsafe_allow_html=True)
 
     uploaded_file = st.file_uploader("📤 Unggah Gambar di Sini", type=["jpg", "jpeg", "png"])
 
-    if uploaded_file is not None:
+    if uploaded_file:
         img = Image.open(uploaded_file)
         st.image(img, caption="✨ Gambar yang Diupload ✨", use_container_width=True)
 
@@ -128,8 +108,8 @@ with col1:
                     results = yolo_model(img, conf=0.25, iou=0.3)
                     boxes = results[0].boxes
 
-                    # Jika tidak ada objek, JANGAN tampilkan bounding box
-                    if boxes is None or len(boxes) == 0:
+                    # Pastikan benar-benar tidak ada bounding box
+                    if boxes is None or boxes.data is None or len(boxes.data) == 0:
                         st.markdown("""
                         <div class='result-card theme-peach' style='text-align:center;'>
                             <b>⚠️ Tidak ada objek yang terdeteksi.</b><br>
@@ -137,12 +117,11 @@ with col1:
                         </div>
                         """, unsafe_allow_html=True)
                     else:
-                        # Kalau ada objek, tampilkan hasil deteksi
+                        # Jika ada objek baru tampilkan hasil deteksi
                         result_img = results[0].plot(line_width=2, font_size=12)
                         st.markdown("<div class='result-card theme-mint'>", unsafe_allow_html=True)
                         st.image(result_img, caption="🎉 Hasil Deteksi", use_container_width=True)
 
-                        # Data deteksi
                         data = boxes.data.cpu().numpy()
                         df = pd.DataFrame({
                             "Class": [results[0].names[int(cls)] for cls in data[:, 5]],
@@ -155,7 +134,6 @@ with col1:
                         st.dataframe(df)
                         st.markdown("</div>", unsafe_allow_html=True)
 
-                        # Tombol Unduh Hasil
                         buf = io.BytesIO()
                         Image.fromarray(result_img).save(buf, format="PNG")
                         st.download_button(
