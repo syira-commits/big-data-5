@@ -41,38 +41,47 @@ if uploaded_file is not None:
     # ==========================
     # MODE DETEKSI OBJEK
     # ==========================
-    if menu == "🎯 Deteksi Objek (YOLO)":
+        if menu == "🎯 Deteksi Objek (YOLO)":
         with st.spinner("🐱 Sedang mendeteksi objek... tunggu sebentar ya!"):
-            results = yolo_model(img)
-            data = results[0].boxes.data.cpu().numpy() if results[0].boxes is not None else np.array([])
 
-            # Ambil daftar label dari model
-            names = results[0].names
-            allowed_labels = ["cocopham", "sprite"]
+            # --- Langkah 1: Cek apakah gambar kemungkinan besar teks/grafik ---
+            img_cv = np.array(img.convert("RGB"))
+            gray = cv2.cvtColor(img_cv, cv2.COLOR_RGB2GRAY)
+            edges = cv2.Canny(gray, 100, 200)
+            edge_density = np.sum(edges > 0) / (gray.shape[0] * gray.shape[1])
 
-            # Filter hanya objek yang diizinkan (cocopham/sprite)
-            filtered = []
-            if len(data) > 0:
-                for box in data:
-                    cls_id = int(box[5])
-                    conf = float(box[4])
-                    label = names.get(cls_id, "Unknown")
-                    if label in allowed_labels and conf > 0.5:
-                        filtered.append((label, conf, box))
-
-            # === Tampilkan hasil ===
-            if len(filtered) == 0:
-                st.warning("Tidak ada objek terdeteksi 😿 (hanya mendeteksi Cocopham & Sprite)")
+            # Jika edge terlalu padat (banyak garis rapat = teks/grafik), skip YOLO
+            if edge_density > 0.12:
+                st.warning("Gambar terdeteksi sebagai teks/grafik — tidak ada objek yang relevan 💤")
             else:
-                # Gambar hasil deteksi (hanya untuk label yang lolos filter)
-                annotated_img = results[0].plot()
-                st.image(annotated_img, caption="🎉 Hasil Deteksi!", use_container_width=True)
+                # --- Langkah 2: Jalankan YOLO ---
+                results = yolo_model(img)
+                data = results[0].boxes.data.cpu().numpy() if results[0].boxes is not None else np.array([])
 
-                st.subheader("📋 Detail Deteksi")
-                st.dataframe({
-                    "Class": [f[0] for f in filtered],
-                    "Confidence": [round(f[1], 2) for f in filtered],
-                })
+                names = results[0].names
+                allowed_labels = ["cocopham", "sprite"]
+
+                filtered = []
+                if len(data) > 0:
+                    for box in data:
+                        cls_id = int(box[5])
+                        conf = float(box[4])
+                        label = names.get(cls_id, "Unknown")
+                        if label in allowed_labels and conf > 0.5:
+                            filtered.append((label, conf, box))
+
+                # --- Langkah 3: Tampilkan hasil ---
+                if len(filtered) == 0:
+                    st.warning("Tidak ada objek terdeteksi 😿 (hanya mendeteksi Cocopham & Sprite)")
+                else:
+                    annotated_img = results[0].plot()
+                    st.image(annotated_img, caption="🎉 Hasil Deteksi!", use_container_width=True)
+
+                    st.subheader("📋 Detail Deteksi")
+                    st.dataframe({
+                        "Class": [f[0] for f in filtered],
+                        "Confidence": [round(f[1], 2) for f in filtered],
+                    })
 
     # ==========================
     # MODE KLASIFIKASI GAMBAR
