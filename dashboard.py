@@ -4,6 +4,7 @@ import tensorflow as tf
 from tensorflow.keras.preprocessing import image
 import numpy as np
 from PIL import Image
+import pandas as pd
 import io
 
 # ==========================
@@ -116,7 +117,7 @@ with col1:
         st.image(img, caption="✨ Gambar yang Diupload ✨", use_container_width=True)
 
         # ==========================
-        # YOLO
+        # YOLO DETECTION
         # ==========================
         if menu == "🎯 Deteksi Objek (YOLO)":
             st.subheader("⚙️ Pengaturan Deteksi")
@@ -126,22 +127,25 @@ with col1:
                 with st.spinner("🔍 Sedang mendeteksi objek..."):
                     results = yolo_model(img, conf=0.25, iou=0.3)
                     boxes = results[0].boxes
-                    if boxes is not None and len(boxes) > 0:
+
+                    if boxes is None or len(boxes) == 0:
+                        st.warning("⚠️ Tidak ada objek yang terdeteksi.")
+                    else:
                         result_img = results[0].plot(line_width=2, font_size=12)
                         st.markdown("<div class='result-card theme-mint'>", unsafe_allow_html=True)
                         st.image(result_img, caption="🎉 Hasil Deteksi", use_container_width=True)
 
-                        # Data deteksi
+                        # Data deteksi pakai pandas
                         data = boxes.data.cpu().numpy()
-                        deteksi_df = {
+                        df = pd.DataFrame({
                             "Class": [results[0].names[int(cls)] for cls in data[:, 5]],
                             "Confidence": [round(conf, 2) for conf in data[:, 4]],
                             "X_min": data[:, 0],
                             "Y_min": data[:, 1],
                             "X_max": data[:, 2],
                             "Y_max": data[:, 3]
-                        }
-                        st.dataframe(deteksi_df)
+                        })
+                        st.dataframe(df)
                         st.markdown("</div>", unsafe_allow_html=True)
 
                         # Tombol Unduh
@@ -153,11 +157,9 @@ with col1:
                             file_name="hasil_deteksi.png",
                             mime="image/png"
                         )
-                    else:
-                        st.warning("Tidak ada objek yang terdeteksi.")
 
         # ==========================
-        # CNN
+        # CNN CLASSIFICATION
         # ==========================
         elif menu == "🧩 Klasifikasi Gambar":
             with st.spinner("🧠 Sedang memprediksi jenis gambar..."):
@@ -182,7 +184,6 @@ with col1:
                 st.write("**Probabilitas:**", f"{confidence:.2f}")
                 st.markdown("</div>", unsafe_allow_html=True)
 
-                # Tombol unduh hasil teks
                 hasil_text = f"Hasil Prediksi: {label}\nProbabilitas: {confidence:.2f}"
                 st.download_button(
                     label="📥 Unduh Hasil Analisis",
