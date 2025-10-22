@@ -117,53 +117,53 @@ with col1:
         st.image(img, caption="✨ Gambar yang Diupload ✨", use_container_width=True)
 
         # ==========================
-     # YOLO DETECTION
-# ==========================
-if menu == "🎯 Deteksi Objek (YOLO)":
-    st.subheader("⚙️ Pengaturan Deteksi")
-    detect_option = st.checkbox("Aktifkan deteksi objek YOLO", value=True)
+        # YOLO DETECTION
+        # ==========================
+        if menu == "🎯 Deteksi Objek (YOLO)":
+            st.subheader("⚙️ Pengaturan Deteksi")
+            detect_option = st.checkbox("Aktifkan deteksi objek YOLO", value=True)
 
-    if detect_option:
-        with st.spinner("🔍 Sedang mendeteksi objek..."):
-            results = yolo_model(img, conf=0.25, iou=0.3)
-            boxes = results[0].boxes
+            if detect_option:
+                with st.spinner("🔍 Sedang mendeteksi objek..."):
+                    results = yolo_model(img, conf=0.25, iou=0.3)
+                    boxes = results[0].boxes
 
-            # Cek apakah ada objek
-            if boxes is None or len(boxes) == 0:
-                st.markdown("""
-                <div class='result-card theme-peach'>
-                    <b>⚠️ Tidak ada objek yang terdeteksi.</b><br>
-                    Gambar ini tampaknya tidak mengandung objek yang dikenali oleh model.
-                </div>
-                """, unsafe_allow_html=True)
-            else:
-                # Kalau ada objek, baru tampilkan hasil deteksi
-                result_img = results[0].plot(line_width=2, font_size=12)
-                st.markdown("<div class='result-card theme-mint'>", unsafe_allow_html=True)
-                st.image(result_img, caption="🎉 Hasil Deteksi", use_container_width=True)
+                    # Jika tidak ada objek, JANGAN tampilkan bounding box
+                    if boxes is None or len(boxes) == 0:
+                        st.markdown("""
+                        <div class='result-card theme-peach' style='text-align:center;'>
+                            <b>⚠️ Tidak ada objek yang terdeteksi.</b><br>
+                            Gambar ini tampaknya tidak mengandung objek yang dikenali oleh model.
+                        </div>
+                        """, unsafe_allow_html=True)
+                    else:
+                        # Kalau ada objek, tampilkan hasil deteksi
+                        result_img = results[0].plot(line_width=2, font_size=12)
+                        st.markdown("<div class='result-card theme-mint'>", unsafe_allow_html=True)
+                        st.image(result_img, caption="🎉 Hasil Deteksi", use_container_width=True)
 
-                # Data deteksi pakai pandas
-                data = boxes.data.cpu().numpy()
-                df = pd.DataFrame({
-                    "Class": [results[0].names[int(cls)] for cls in data[:, 5]],
-                    "Confidence": [round(conf, 2) for conf in data[:, 4]],
-                    "X_min": data[:, 0],
-                    "Y_min": data[:, 1],
-                    "X_max": data[:, 2],
-                    "Y_max": data[:, 3]
-                })
-                st.dataframe(df)
-                st.markdown("</div>", unsafe_allow_html=True)
+                        # Data deteksi
+                        data = boxes.data.cpu().numpy()
+                        df = pd.DataFrame({
+                            "Class": [results[0].names[int(cls)] for cls in data[:, 5]],
+                            "Confidence": [round(conf, 2) for conf in data[:, 4]],
+                            "X_min": data[:, 0],
+                            "Y_min": data[:, 1],
+                            "X_max": data[:, 2],
+                            "Y_max": data[:, 3]
+                        })
+                        st.dataframe(df)
+                        st.markdown("</div>", unsafe_allow_html=True)
 
-                # Tombol Unduh Hasil Deteksi
-                buf = io.BytesIO()
-                Image.fromarray(result_img).save(buf, format="PNG")
-                st.download_button(
-                    label="📥 Unduh Hasil Deteksi",
-                    data=buf.getvalue(),
-                    file_name="hasil_deteksi.png",
-                    mime="image/png"
-                )
+                        # Tombol Unduh Hasil
+                        buf = io.BytesIO()
+                        Image.fromarray(result_img).save(buf, format="PNG")
+                        st.download_button(
+                            label="📥 Unduh Hasil Deteksi",
+                            data=buf.getvalue(),
+                            file_name="hasil_deteksi.png",
+                            mime="image/png"
+                        )
 
         # ==========================
         # CNN CLASSIFICATION
