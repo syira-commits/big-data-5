@@ -11,11 +11,13 @@ import cv2
 # ==========================
 @st.cache_resource
 def load_models():
-    yolo_model = YOLO("model/Mulya Syira_Laporan 4.pt")  # Model deteksi objek
-    classifier = tf.keras.models.load_model("model/Mulya Syira_Laporan2.h5")  # Model klasifikasi
-    return yolo_model, classifier
+    # Model deteksi custom dan umum
+    yolo_custom = YOLO("model/Mulya Syira_Laporan 4.pt")  # model custom kamu
+    yolo_general = YOLO("yolov8n.pt")  # model umum dari COCO dataset
+    classifier = tf.keras.models.load_model("model/Mulya Syira_Laporan2.h5")  # model CNN
+    return yolo_custom, yolo_general, classifier
 
-yolo_model, classifier = load_models()
+yolo_custom, yolo_general, classifier = load_models()
 
 # ==========================
 # Setup Page
@@ -23,7 +25,7 @@ yolo_model, classifier = load_models()
 st.set_page_config(page_title="Deteksi dan Klasifikasi Gambar", page_icon="📷", layout="wide")
 
 # ==========================
-# Custom CSS (Tema Cerah Pastel)
+# Custom CSS (Pastel Theme)
 # ==========================
 st.markdown("""
 <style>
@@ -35,20 +37,8 @@ body {
     background-color: #FFF7F3;
     border-right: 1px solid #F2E7DC;
 }
-h1, h2, h3 {
-    font-weight: 600;
-}
-.main-title {
-    font-size: 2.3rem;
-    font-weight: 700;
-    color: #2D2D2D;
-    margin-bottom: 0.5rem;
-}
-.subtext {
-    font-size: 1rem;
-    color: #555;
-    margin-bottom: 2rem;
-}
+.main-title {font-size: 2.3rem; font-weight: 700; color: #2D2D2D;}
+.subtext {font-size: 1rem; color: #555; margin-bottom: 2rem;}
 .upload-box {
     background-color: #FFFFFF;
     border: 2px dashed #E5E7EB;
@@ -97,10 +87,18 @@ h1, h2, h3 {
 # ==========================
 # Sidebar
 # ==========================
-st.sidebar.header("📊 Pilih Mode Analisis")
-menu = st.sidebar.radio("Mode:", ["🎯 Deteksi Objek (YOLO)", "🧩 Klasifikasi Gambar"])
+st.sidebar.header("📊 Pengaturan Analisis")
+
+menu = st.sidebar.radio("Pilih Mode:", ["🎯 Deteksi Objek (YOLO)", "🧩 Klasifikasi Gambar"])
+
 st.sidebar.markdown("---")
 st.sidebar.info("Unggah gambar dan biarkan AI menganalisis dengan cerdas dan lembut.")
+
+# Pengaturan deteksi YOLO
+st.sidebar.markdown("### ⚙ Pengaturan YOLO")
+model_choice = st.sidebar.selectbox("Pilih Model YOLO:", ["Custom (Mulya Syira_Laporan 4.pt)", "Umum (yolov8n.pt)"])
+conf_thresh = st.sidebar.slider("Confidence Threshold", 0.1, 1.0, 0.55, 0.05)
+iou_thresh = st.sidebar.slider("IoU Threshold", 0.1, 1.0, 0.4, 0.05)
 
 # ==========================
 # Layout Utama
@@ -109,7 +107,7 @@ col1, col2 = st.columns([2.3, 1.2])
 
 with col1:
     st.markdown("<div class='main-title'>Deteksi dan Klasifikasi Gambar</div>", unsafe_allow_html=True)
-    st.markdown("<div class='subtext'>Gunakan teknologi <b>YOLOv8</b> untuk deteksi objek dan <b>CNN (TensorFlow)</b> untuk klasifikasi gambar. Unggah gambar, lalu lihat hasil analisis secara instan.</div>", unsafe_allow_html=True)
+    st.markdown("<div class='subtext'>Gunakan <b>YOLOv8</b> untuk deteksi objek dan <b>CNN TensorFlow</b> untuk klasifikasi. Cukup unggah gambar dan lihat hasil analisisnya.</div>", unsafe_allow_html=True)
 
     uploaded_file = st.file_uploader("📤 Unggah Gambar di Sini", type=["jpg", "jpeg", "png"])
 
@@ -118,38 +116,33 @@ with col1:
         st.image(img, caption="✨ Gambar yang Diupload ✨", use_container_width=True)
 
         # ==========================
-        # MODE DETEKSI OBJEK YOLO
+        # MODE DETEKSI OBJEK (YOLO)
         # ==========================
         if menu == "🎯 Deteksi Objek (YOLO)":
-            st.subheader("⚙ Pengaturan Deteksi")
-            detect_option = st.checkbox("Aktifkan deteksi objek YOLO", value=True)
+            detect_option = st.checkbox("Aktifkan Deteksi YOLO", value=True)
 
             if detect_option:
                 with st.spinner("🔍 Sedang mendeteksi objek..."):
-                    # Konversi gambar ke array
                     img_array = np.array(img)
 
-                    # Jalankan YOLO dengan threshold lebih tinggi
-                    results = yolo_model(img_array, conf=0.55, iou=0.4)
+                    # Pilih model sesuai sidebar
+                    model_yolo = yolo_custom if "Custom" in model_choice else yolo_general
+
+                    # Jalankan deteksi
+                    results = model_yolo(img_array, conf=conf_thresh, iou=iou_thresh)
                     boxes = results[0].boxes
 
                     if boxes is None or len(boxes) == 0:
-                        st.markdown("<div class='result-card theme-mint'>", unsafe_allow_html=True)
                         st.warning("🚫 Tidak ada objek yang terdeteksi.")
                         st.image(img, caption="Hasil: Tidak ada deteksi", use_container_width=True)
-                        st.markdown("</div>", unsafe_allow_html=True)
                     else:
-                        # Ambil data deteksi dan filter confidence rendah
                         data = boxes.data.cpu().numpy()
-                        data = data[data[:, 4] > 0.55]  # filter manual
+                        data = data[data[:, 4] > conf_thresh]
 
                         if len(data) == 0:
-                            st.markdown("<div class='result-card theme-mint'>", unsafe_allow_html=True)
-                            st.warning("🚫 Tidak ada objek yang memenuhi threshold confidence ≥ 0.55.")
+                            st.warning(f"🚫 Tidak ada objek dengan confidence ≥ {conf_thresh:.2f}.")
                             st.image(img, caption="Hasil: Tidak ada deteksi valid", use_container_width=True)
-                            st.markdown("</div>", unsafe_allow_html=True)
                         else:
-                            st.markdown("<div class='result-card theme-mint'>", unsafe_allow_html=True)
                             st.success("✅ Objek terdeteksi!")
                             st.image(results[0].plot(), caption="Hasil Deteksi YOLO", use_container_width=True)
 
@@ -161,7 +154,6 @@ with col1:
                                 "X_max": data[:, 2],
                                 "Y_max": data[:, 3]
                             })
-                            st.markdown("</div>", unsafe_allow_html=True)
             else:
                 st.info("🕹 Deteksi YOLO dimatikan.")
 
@@ -197,10 +189,18 @@ with col1:
 
 with col2:
     st.markdown("### 📈 Informasi Model")
-    st.markdown("<div class='result-card theme-butter'><b>YOLOv8:</b> Deteksi objek cepat & akurat.<br><b>CNN:</b> Klasifikasi citra.<br><br><b>Confidence Threshold:</b> 0.55<br><b>IoU:</b> 0.4</div>", unsafe_allow_html=True)
+    st.markdown(f"""
+    <div class='result-card theme-butter'>
+    <b>Model:</b> {model_choice}<br>
+    <b>Confidence Threshold:</b> {conf_thresh}<br>
+    <b>IoU:</b> {iou_thresh}<br><br>
+    <b>YOLOv8:</b> Deteksi objek cepat & akurat<br>
+    <b>CNN:</b> Klasifikasi citra
+    </div>
+    """, unsafe_allow_html=True)
 
     st.markdown("### 💡 Tips Penggunaan")
-    st.markdown("<div class='result-card theme-peach'>🖼 Gunakan gambar dengan resolusi jelas.<br>🤍 Coba bandingkan hasil YOLO dan CNN.<br>📊 Eksperimen dengan berbagai objek menarik!</div>", unsafe_allow_html=True)
+    st.markdown("<div class='result-card theme-peach'>🖼 Gunakan gambar dengan resolusi jelas.<br>🤍 Coba bandingkan hasil YOLO Custom dan Umum.<br>📊 Eksperimen dengan berbagai objek menarik!</div>", unsafe_allow_html=True)
 
 # ==========================
 # Footer
