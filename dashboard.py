@@ -20,10 +20,10 @@ yolo_model, classifier = load_models()
 # ==========================
 # Setup Page
 # ==========================
-st.set_page_config(page_title="Dashboard AI Lucu", page_icon="🐾", layout="wide")
+st.set_page_config(page_title="Deteksi dan Klasifikasi Gambar", page_icon="📷", layout="wide")
 
 # ==========================
-# Custom CSS (tema pastel cerah)
+# Custom CSS (Tema Cerah Pastel)
 # ==========================
 st.markdown("""
 <style>
@@ -32,16 +32,16 @@ body {
     font-family: 'Poppins', sans-serif;
 }
 [data-testid="stSidebar"] {
-    background-color: #FFFBF5;
-    border-right: 1px solid #EEE;
+    background-color: #FFF7F3;
+    border-right: 1px solid #F2E7DC;
 }
 h1, h2, h3 {
     font-weight: 600;
 }
 .main-title {
-    font-size: 2.2rem;
+    font-size: 2.3rem;
     font-weight: 700;
-    color: #1E1E1E;
+    color: #2D2D2D;
     margin-bottom: 0.5rem;
 }
 .subtext {
@@ -63,7 +63,6 @@ h1, h2, h3 {
     padding: 1.5rem;
     box-shadow: 0 4px 12px rgba(0,0,0,0.07);
     margin-top: 1.5rem;
-    border-left: 8px solid #FFDFD3; /* pastel peach */
 }
 .result-card:hover {
     transform: scale(1.01);
@@ -75,20 +74,33 @@ h1, h2, h3 {
     font-size: 0.9rem;
     margin-top: 3rem;
 }
-.theme-peach {border-left: 8px solid #FFDFD3;}
-.theme-lilac {border-left: 8px solid #E2D7F5;}
-.theme-mint {border-left: 8px solid #C6F1D6;}
+.theme-peach {border-left: 8px solid #FFD8C2;}
+.theme-lilac {border-left: 8px solid #E4D7FF;}
+.theme-mint {border-left: 8px solid #C9F5D7;}
 .theme-butter {border-left: 8px solid #FFF5B8;}
+[data-testid="stButton"] > button {
+    background: linear-gradient(90deg, #FFD8C2, #E4D7FF);
+    color: #2D2D2D;
+    border: none;
+    border-radius: 12px;
+    padding: 0.5rem 1rem;
+    font-weight: 600;
+}
+[data-testid="stButton"] > button:hover {
+    background: linear-gradient(90deg, #FFC6AA, #DCC8FF);
+    transform: scale(1.02);
+    transition: 0.2s;
+}
 </style>
 """, unsafe_allow_html=True)
 
 # ==========================
 # Sidebar
 # ==========================
-st.sidebar.header("🐾 Mode Analisis")
-menu = st.sidebar.radio("🌈 Pilih Mode:", ["🎯 Deteksi Objek (YOLO)", "🧩 Klasifikasi Gambar"])
+st.sidebar.header("📊 Pilih Mode Analisis")
+menu = st.sidebar.radio("Mode:", ["🎯 Deteksi Objek (YOLO)", "🧩 Klasifikasi Gambar"])
 st.sidebar.markdown("---")
-st.sidebar.info("Unggah gambar dan biarkan AI bekerja dengan cerdas tapi lembut.")
+st.sidebar.info("Unggah gambar dan biarkan AI menganalisis dengan cerdas dan lembut.")
 
 # ==========================
 # Layout Utama
@@ -96,8 +108,8 @@ st.sidebar.info("Unggah gambar dan biarkan AI bekerja dengan cerdas tapi lembut.
 col1, col2 = st.columns([2.3, 1.2])
 
 with col1:
-    st.markdown("<div class='main-title'>Invest in your exploration</div>", unsafe_allow_html=True)
-    st.markdown("<div class='subtext'>Gunakan teknologi <b>YOLO</b> untuk deteksi objek dan <b>CNN (TensorFlow)</b> untuk klasifikasi gambar. Cukup unggah gambar dan lihat hasil analisisnya secara instan.</div>", unsafe_allow_html=True)
+    st.markdown("<div class='main-title'>Deteksi dan Klasifikasi Gambar</div>", unsafe_allow_html=True)
+    st.markdown("<div class='subtext'>Gunakan teknologi <b>YOLOv8</b> untuk deteksi objek dan <b>CNN (TensorFlow)</b> untuk klasifikasi gambar. Unggah gambar, lalu lihat hasil analisis secara instan.</div>", unsafe_allow_html=True)
 
     uploaded_file = st.file_uploader("📤 Unggah Gambar di Sini", type=["jpg", "jpeg", "png"])
 
@@ -119,7 +131,7 @@ with col1:
                     if boxes is not None and len(boxes) > 0:
                         result_img = results[0].plot(line_width=2, font_size=12)
                         st.markdown("<div class='result-card theme-mint'>", unsafe_allow_html=True)
-                        st.image(result_img, caption="🎉 Hasil Deteksi!", use_container_width=True)
+                        st.image(result_img, caption="🎉 Hasil Deteksi", use_container_width=True)
                         data = boxes.data.cpu().numpy()
                         st.dataframe({
                             "Class": [results[0].names[int(cls)] for cls in data[:, 5]],
@@ -169,9 +181,9 @@ with col2:
     st.markdown("<div class='result-card theme-butter'><b>YOLOv8:</b> Deteksi objek cepat & akurat.<br><b>CNN:</b> Klasifikasi citra.<br><br><b>Confidence Threshold:</b> 0.25<br><b>IoU:</b> 0.3</div>", unsafe_allow_html=True)
 
     st.markdown("### 💡 Tips Penggunaan")
-    st.markdown("<div class='result-card theme-peach'>🖼️ Gunakan gambar dengan resolusi jelas.<br>🐾 Coba bandingkan hasil YOLO dan CNN.<br>📊 Eksperimen dengan berbagai objek menarik!</div>", unsafe_allow_html=True)
+    st.markdown("<div class='result-card theme-peach'>🖼️ Gunakan gambar dengan resolusi jelas.<br>🤍 Coba bandingkan hasil YOLO dan CNN.<br>📊 Eksperimen dengan berbagai objek menarik!</div>", unsafe_allow_html=True)
 
 # ==========================
 # Footer
 # ==========================
-st.markdown("<div class='footer'>🐾 Dibuat oleh <b>Mulya Syira</b> — Dashboard AI dengan sentuhan pastel yang lembut dan cerdas.</div>", unsafe_allow_html=True)
+st.markdown("<div class='footer'>📷 Dibuat oleh <b>Mulya Syira</b> — Dashboard AI bertema pastel lembut yang elegan dan interaktif.</div>", unsafe_allow_html=True)
