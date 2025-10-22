@@ -128,6 +128,7 @@ with col1:
                     results = yolo_model(img, conf=0.25, iou=0.3)
                     boxes = results[0].boxes
 
+                    # Perbaikan: tampilkan pesan jika tidak ada objek terdeteksi
                     if boxes is None or len(boxes) == 0:
                         st.warning("⚠️ Tidak ada objek yang terdeteksi.")
                     else:
@@ -148,7 +149,7 @@ with col1:
                         st.dataframe(df)
                         st.markdown("</div>", unsafe_allow_html=True)
 
-                        # Tombol Unduh
+                        # Tombol Unduh Hasil Deteksi
                         buf = io.BytesIO()
                         Image.fromarray(result_img).save(buf, format="PNG")
                         st.download_button(
