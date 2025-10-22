@@ -4,7 +4,6 @@ import tensorflow as tf
 from tensorflow.keras.preprocessing import image
 import numpy as np
 from PIL import Image
-import cv2
 
 # ==========================
 # Load Models
@@ -118,40 +117,38 @@ with col1:
         st.image(img, caption="✨ Gambar yang Diupload ✨", use_container_width=True)
 
         # ==========================
-        # MODE DETEKSI YOLO (versi fix)
+        # MODE DETEKSI YOLO (TANPA BOUNDING BOX)
         # ==========================
         if menu == "🎯 Deteksi Objek (YOLO)":
-    st.subheader("⚙️ Pengaturan Deteksi")
-    detect_option = st.checkbox("Aktifkan deteksi objek YOLO", value=True)
+            st.subheader("⚙️ Pengaturan Deteksi")
+            detect_option = st.checkbox("Aktifkan deteksi objek YOLO", value=True)
 
-    if detect_option:
-        with st.spinner("🔍 Sedang mendeteksi objek..."):
-            results = yolo_model(img, conf=0.25, iou=0.3)
-            boxes = results[0].boxes
+            if detect_option:
+                with st.spinner("🔍 Sedang mendeteksi objek..."):
+                    results = yolo_model(img, conf=0.25, iou=0.3)
+                    boxes = results[0].boxes
 
-            if boxes is None or len(boxes) == 0:
-                st.markdown("<div class='result-card theme-mint'>", unsafe_allow_html=True)
-                st.warning("🚫 Tidak ada objek yang terdeteksi.")
-                st.image(img, caption="Hasil: Tidak ada deteksi", use_container_width=True)
-                st.markdown("</div>", unsafe_allow_html=True)
+                    if boxes is None or len(boxes) == 0:
+                        st.markdown("<div class='result-card theme-mint'>", unsafe_allow_html=True)
+                        st.warning("🚫 Tidak ada objek yang terdeteksi.")
+                        st.image(img, caption="Hasil: Tidak ada deteksi", use_container_width=True)
+                        st.markdown("</div>", unsafe_allow_html=True)
+                    else:
+                        st.markdown("<div class='result-card theme-mint'>", unsafe_allow_html=True)
+                        st.image(img, caption="✅ Objek terdeteksi (tanpa bounding box)", use_container_width=True)
+
+                        data = boxes.data.cpu().numpy()
+                        st.dataframe({
+                            "Class": [results[0].names[int(cls)] for cls in data[:, 5]],
+                            "Confidence": [round(conf, 2) for conf in data[:, 4]],
+                            "X_min": data[:, 0],
+                            "Y_min": data[:, 1],
+                            "X_max": data[:, 2],
+                            "Y_max": data[:, 3]
+                        })
+                        st.markdown("</div>", unsafe_allow_html=True)
             else:
-                # 🔥 Tampilkan gambar asli TANPA bounding box
-                st.markdown("<div class='result-card theme-mint'>", unsafe_allow_html=True)
-                st.image(img, caption="✅ Objek terdeteksi (tanpa bounding box)", use_container_width=True)
-
-                # Ambil data deteksi aja (tanpa plot visual)
-                data = boxes.data.cpu().numpy()
-                st.dataframe({
-                    "Class": [results[0].names[int(cls)] for cls in data[:, 5]],
-                    "Confidence": [round(conf, 2) for conf in data[:, 4]],
-                    "X_min": data[:, 0],
-                    "Y_min": data[:, 1],
-                    "X_max": data[:, 2],
-                    "Y_max": data[:, 3]
-                })
-                st.markdown("</div>", unsafe_allow_html=True)
-    else:
-        st.info("🕹️ Deteksi YOLO dimatikan.")
+                st.info("🕹️ Deteksi YOLO dimatikan.")
 
         # ==========================
         # MODE KLASIFIKASI GAMBAR
