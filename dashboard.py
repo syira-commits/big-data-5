@@ -4,6 +4,7 @@ import tensorflow as tf
 from tensorflow.keras.preprocessing import image
 import numpy as np
 from PIL import Image
+import cv2
 
 # ==========================
 # Load Models
@@ -113,45 +114,56 @@ with col1:
     uploaded_file = st.file_uploader("📤 Unggah Gambar di Sini", type=["jpg", "jpeg", "png"])
 
     if uploaded_file is not None:
-        img = Image.open(uploaded_file)
+        img = Image.open(uploaded_file).convert("RGB")
         st.image(img, caption="✨ Gambar yang Diupload ✨", use_container_width=True)
 
         # ==========================
-        # MODE DETEKSI YOLO (FIX)
+        # MODE DETEKSI OBJEK YOLO
         # ==========================
         if menu == "🎯 Deteksi Objek (YOLO)":
-            st.subheader("⚙️ Pengaturan Deteksi")
+            st.subheader("⚙ Pengaturan Deteksi")
             detect_option = st.checkbox("Aktifkan deteksi objek YOLO", value=True)
 
             if detect_option:
                 with st.spinner("🔍 Sedang mendeteksi objek..."):
-                    results = yolo_model(img, conf=0.25, iou=0.3)
+                    # Konversi gambar ke array
+                    img_array = np.array(img)
+
+                    # Jalankan YOLO dengan threshold lebih tinggi
+                    results = yolo_model(img_array, conf=0.55, iou=0.4)
                     boxes = results[0].boxes
 
                     if boxes is None or len(boxes) == 0:
-                        # 🚫 Tidak ada objek
                         st.markdown("<div class='result-card theme-mint'>", unsafe_allow_html=True)
                         st.warning("🚫 Tidak ada objek yang terdeteksi.")
                         st.image(img, caption="Hasil: Tidak ada deteksi", use_container_width=True)
                         st.markdown("</div>", unsafe_allow_html=True)
                     else:
-                        # ✅ Ada objek → tampilkan bounding box
-                        st.markdown("<div class='result-card theme-mint'>", unsafe_allow_html=True)
-                        annotated_frame = results[0].plot()
-                        st.image(annotated_frame, caption="✅ Hasil Deteksi dengan Bounding Box", use_container_width=True)
-
+                        # Ambil data deteksi dan filter confidence rendah
                         data = boxes.data.cpu().numpy()
-                        st.dataframe({
-                            "Class": [results[0].names[int(cls)] for cls in data[:, 5]],
-                            "Confidence": [round(conf, 2) for conf in data[:, 4]],
-                            "X_min": data[:, 0],
-                            "Y_min": data[:, 1],
-                            "X_max": data[:, 2],
-                            "Y_max": data[:, 3]
-                        })
-                        st.markdown("</div>", unsafe_allow_html=True)
+                        data = data[data[:, 4] > 0.55]  # filter manual
+
+                        if len(data) == 0:
+                            st.markdown("<div class='result-card theme-mint'>", unsafe_allow_html=True)
+                            st.warning("🚫 Tidak ada objek yang memenuhi threshold confidence ≥ 0.55.")
+                            st.image(img, caption="Hasil: Tidak ada deteksi valid", use_container_width=True)
+                            st.markdown("</div>", unsafe_allow_html=True)
+                        else:
+                            st.markdown("<div class='result-card theme-mint'>", unsafe_allow_html=True)
+                            st.success("✅ Objek terdeteksi!")
+                            st.image(results[0].plot(), caption="Hasil Deteksi YOLO", use_container_width=True)
+
+                            st.dataframe({
+                                "Class": [results[0].names[int(cls)] for cls in data[:, 5]],
+                                "Confidence": [round(conf, 2) for conf in data[:, 4]],
+                                "X_min": data[:, 0],
+                                "Y_min": data[:, 1],
+                                "X_max": data[:, 2],
+                                "Y_max": data[:, 3]
+                            })
+                            st.markdown("</div>", unsafe_allow_html=True)
             else:
-                st.info("🕹️ Deteksi YOLO dimatikan.")
+                st.info("🕹 Deteksi YOLO dimatikan.")
 
         # ==========================
         # MODE KLASIFIKASI GAMBAR
@@ -176,18 +188,19 @@ with col1:
 
                 st.markdown("<div class='result-card theme-lilac'>", unsafe_allow_html=True)
                 st.success("✅ Prediksi Selesai")
-                st.write("**Hasil Prediksi:**", label)
-                st.write("**Probabilitas:**", f"{confidence:.2f}")
+                st.write("Hasil Prediksi:", label)
+                st.write("Probabilitas:", f"{confidence:.2f}")
                 st.markdown("</div>", unsafe_allow_html=True)
+
     else:
         st.markdown("<div class='upload-box'>📤 Silakan unggah gambar terlebih dahulu 💡</div>", unsafe_allow_html=True)
 
 with col2:
     st.markdown("### 📈 Informasi Model")
-    st.markdown("<div class='result-card theme-butter'><b>YOLOv8:</b> Deteksi objek cepat & akurat.<br><b>CNN:</b> Klasifikasi citra.<br><br><b>Confidence Threshold:</b> 0.25<br><b>IoU:</b> 0.3</div>", unsafe_allow_html=True)
+    st.markdown("<div class='result-card theme-butter'><b>YOLOv8:</b> Deteksi objek cepat & akurat.<br><b>CNN:</b> Klasifikasi citra.<br><br><b>Confidence Threshold:</b> 0.55<br><b>IoU:</b> 0.4</div>", unsafe_allow_html=True)
 
     st.markdown("### 💡 Tips Penggunaan")
-    st.markdown("<div class='result-card theme-peach'>🖼️ Gunakan gambar dengan resolusi jelas.<br>🤍 Coba bandingkan hasil YOLO dan CNN.<br>📊 Eksperimen dengan berbagai objek menarik!</div>", unsafe_allow_html=True)
+    st.markdown("<div class='result-card theme-peach'>🖼 Gunakan gambar dengan resolusi jelas.<br>🤍 Coba bandingkan hasil YOLO dan CNN.<br>📊 Eksperimen dengan berbagai objek menarik!</div>", unsafe_allow_html=True)
 
 # ==========================
 # Footer
