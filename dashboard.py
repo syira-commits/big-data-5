@@ -4,15 +4,9 @@ import tensorflow as tf
 from tensorflow.keras.preprocessing import image
 import numpy as np
 from PIL import Image
-import cv2
 from io import BytesIO
-from reportlab.lib.pagesizes import A4
-from reportlab.pdfgen import canvas
 from datetime import datetime
 
-# ==========================
-# Load Models
-# ==========================
 @st.cache_resource
 def load_models():
     yolo_model = YOLO("model/Mulya Syira_Laporan 4.pt")
@@ -21,12 +15,8 @@ def load_models():
 
 yolo_model, classifier = load_models()
 
-# ==========================
-# Tampilan Dashboard
-# ==========================
 st.set_page_config(page_title="Deteksi & Klasifikasi Gambar", page_icon="🐾", layout="centered")
 
-# Warna pastel cerah via CSS
 st.markdown("""
     <style>
         body {
@@ -46,9 +36,6 @@ st.markdown("""
             background-color: #FFB6C1;
             color: white;
         }
-        .css-1v0mbdj, .css-1d391kg {
-            background-color: transparent !important;
-        }
         h1, h2, h3 {
             color: #FF6B8B;
         }
@@ -56,33 +43,18 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 st.title("🐾 Deteksi & Klasifikasi Gambar")
-st.markdown("Gunakan model **YOLO** untuk deteksi objek dan **CNN** untuk klasifikasi. Tampilan ini dibuat lembut dengan warna pastel yang cerah!")
+st.markdown("Gunakan model **YOLO** untuk deteksi objek dan **CNN** untuk klasifikasi gambar. Tampilan pastel cerah yang lembut dan interaktif!")
 
 menu = st.sidebar.radio("🌈 Pilih Mode:", ["🎯 Deteksi Objek (YOLO)", "🧩 Klasifikasi Gambar"])
 uploaded_file = st.file_uploader("📤 Unggah Gambar", type=["jpg", "jpeg", "png"])
 
-# ==========================
-# Fungsi Buat PDF
-# ==========================
-def create_pdf(result_text, filename="hasil_analisis.pdf"):
+# Fungsi unduh hasil sebagai TXT
+def make_txt(result_text, filename):
     buffer = BytesIO()
-    c = canvas.Canvas(buffer, pagesize=A4)
-    c.setFont("Helvetica-Bold", 16)
-    c.drawString(100, 800, "Laporan Analisis Gambar")
-    c.setFont("Helvetica", 12)
-    c.drawString(100, 770, f"Tanggal: {datetime.now().strftime('%d %B %Y %H:%M')}")
-    c.drawString(100, 740, "Hasil Analisis:")
-    text_object = c.beginText(100, 720)
-    for line in result_text.split("\n"):
-        text_object.textLine(line)
-    c.drawText(text_object)
-    c.save()
+    buffer.write(result_text.encode())
     buffer.seek(0)
     return buffer
 
-# ==========================
-# Proses Gambar
-# ==========================
 if uploaded_file is not None:
     img = Image.open(uploaded_file)
     st.image(img, caption="✨ Gambar Diupload ✨", use_container_width=True)
@@ -106,10 +78,11 @@ if uploaded_file is not None:
                 result_text = "=== HASIL DETEKSI YOLO ===\n"
                 for i, (cls, conf) in enumerate(zip(deteksi_df["Class"], deteksi_df["Confidence"])):
                     result_text += f"{i+1}. {cls} - Confidence: {conf}\n"
+                result_text += f"\nTanggal: {datetime.now().strftime('%d %B %Y %H:%M')}"
 
-                pdf_buffer = create_pdf(result_text)
-                st.download_button("💾 Unduh Hasil Analisis (PDF)", data=pdf_buffer,
-                                   file_name="hasil_deteksi.pdf", mime="application/pdf")
+                txt_buffer = make_txt(result_text, "hasil_deteksi.txt")
+                st.download_button("💾 Unduh Hasil Analisis (TXT)", data=txt_buffer,
+                                   file_name="hasil_deteksi.txt", mime="text/plain")
             else:
                 st.warning("Tidak ada objek yang terdeteksi.")
 
@@ -136,13 +109,14 @@ if uploaded_file is not None:
 
             result_text = f"""=== HASIL KLASIFIKASI CNN ===
 Label: {label}
-Probabilitas: {confidence:.2f}"""
+Probabilitas: {confidence:.2f}
+Tanggal: {datetime.now().strftime('%d %B %Y %H:%M')}"""
 
-            pdf_buffer = create_pdf(result_text)
-            st.download_button("💾 Unduh Hasil Analisis (PDF)", data=pdf_buffer,
-                               file_name="hasil_klasifikasi.pdf", mime="application/pdf")
+            txt_buffer = make_txt(result_text, "hasil_klasifikasi.txt")
+            st.download_button("💾 Unduh Hasil Analisis (TXT)", data=txt_buffer,
+                               file_name="hasil_klasifikasi.txt", mime="text/plain")
 else:
     st.info("Silakan unggah gambar terlebih dahulu 💡")
 
 st.markdown("---")
-st.caption("🐾 Dibuat oleh Mulya Syira — versi pastel cerah dengan fitur unduh hasil analisis")
+st.caption("🐾 Dibuat oleh Mulya Syira — versi pastel cerah dan bisa unduh hasil analisis")
