@@ -11,8 +11,8 @@ import cv2
 # ==========================
 @st.cache_resource
 def load_models():
-    yolo_model = YOLO("model/Mulya Syira_Laporan 4.pt")  # Model deteksi objek
-    classifier = tf.keras.models.load_model("model/Mulya Syira_Laporan2.h5")  # Model klasifikasi
+    yolo_model = YOLO("model/Mulya Syira_Laporan 4.pt")
+    classifier = tf.keras.models.load_model("model/Mulya Syira_Laporan2.h5")
     return yolo_model, classifier
 
 yolo_model, classifier = load_models()
@@ -27,7 +27,7 @@ st.set_page_config(
 )
 
 # ==========================
-# Custom CSS untuk background & file uploader
+# Custom CSS
 # ==========================
 st.markdown(
     """
@@ -39,8 +39,8 @@ st.markdown(
         border-radius:0px;
     }
 
-    /* File uploader custom */
-    .css-1r6slb0 input[type="file"] {
+    /* File uploader stabil dan menarik */
+    input[type="file"] {
         background-color: #F3E8FF;
         border: 2px dashed #DCCFFF;
         border-radius: 10px;
@@ -49,7 +49,7 @@ st.markdown(
         width: 100%;
         box-shadow: 2px 2px 10px rgba(0,0,0,0.1);
     }
-    .css-1r6slb0 input[type="file"]::file-selector-button {
+    input[type="file"]::file-selector-button {
         background-color: #DCCFFF;
         color: black;
         border: none;
