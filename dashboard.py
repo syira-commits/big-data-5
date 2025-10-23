@@ -6,29 +6,42 @@ import time
 import torch
 import pandas as pd
 from ultralytics import YOLO
+from collections import Counter
 
-st.set_page_config(page_title="Deteksi Gambar", page_icon="🩷", layout="centered")
+st.set_page_config(page_title="PinkVision Adaptive Filter", page_icon="🩷", layout="centered")
+st.title("🩷 PinkVision Adaptive Filter (YOLO + Smart Cell Filter)")
 
-st.title("🩷 Aplikasi Deteksi Gambar (YOLO + Filter Otomatis)")
-
-# === Load model YOLO ===
 @st.cache_resource
 def load_yolo_model():
-    return YOLO("model_yolo.pt")  # ganti dengan path modelmu
+    return YOLO("model/Mulya Syira_Laporan 4.pt")
 
 yolo_model = load_yolo_model()
 
-# === Fungsi filter otomatis untuk mendeteksi gambar sel ===
+# === Fungsi bantu: cek apakah gambar terlalu homogen ===
 def is_homogeneous(image, edge_threshold=0.025):
     gray = cv2.cvtColor(np.array(image), cv2.COLOR_RGB2GRAY)
     edges = cv2.Canny(gray, 50, 150)
     edge_density = np.sum(edges > 0) / edges.size
+    return edge_density < edge_threshold
 
-    st.write(f"🔬 Edge density: {edge_density:.5f}")  # bisa dihapus kalau mau tanpa debug
+# === Fungsi bantu: cek warna dominan ===
+def get_dominant_color(image, k=4):
+    img = np.array(image)
+    img = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
+    img = img.reshape((-1, 3))
+    img = np.float32(img)
+    criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 10, 1.0)
+    _, labels, centers = cv2.kmeans(img, k, None, criteria, 10, cv2.KMEANS_RANDOM_CENTERS)
+    centers = np.uint8(centers)
+    dominant = centers[np.argmax(np.bincount(labels.flatten()))]
+    return dominant  # BGR
 
-    # Ambang batas fleksibel — semakin kecil semakin ketat
-    if edge_density < edge_threshold:
-        return True  # gambar terlalu polos → kemungkinan gambar sel
+# === Fungsi bantu: tentukan apakah warna dominan mirip warna mikroskop ===
+def looks_like_cell_color(bgr_color):
+    b, g, r = bgr_color
+    # Warna khas mikroskop: kebiruan / abu-abu pucat / ungu muda
+    if (b > 100 and r < 140 and g < 140) or (abs(r-g) < 20 and abs(g-b) < 20 and r < 160):
+        return True
     return False
 
 # === Upload Gambar ===
@@ -36,19 +49,31 @@ uploaded_files = st.file_uploader("📸 Upload Gambar", accept_multiple_files=Tr
 
 if uploaded_files:
     for uploaded_file in uploaded_files:
-        img = Image.open(uploaded_file)
+        img = Image.open(uploaded_file).convert("RGB")
         st.image(img, caption=f"✨ Gambar: {uploaded_file.name}", use_container_width=True)
 
-        if st.button(f"🌸 Jalankan Deteksi ({uploaded_file.name})"):
+        if st.button(f"🌷 Jalankan Deteksi ({uploaded_file.name})"):
             with st.spinner("🪄 Sedang memproses..."):
                 time.sleep(1.0)
 
-                # 🔹 Langkah 1: cek apakah gambar mirip sel
-                if is_homogeneous(img):
-                    st.warning("🧫 Gambar terlalu homogen — kemungkinan gambar sel, bukan Cocopham/Sprite.")
-                    continue
+                # 🔹 Langkah 1: cek homogenitas
+                homogen = is_homogeneous(img)
 
-                # 🔹 Langkah 2: jalankan YOLO hanya jika bukan gambar sel
+                # 🔹 Langkah 2: cek warna dominan
+                dom_color = get_dominant_color(img)
+                cell_color_like = looks_like_cell_color(dom_color)
+
+                # 🔹 Debug info
+                st.markdown(f"🎨 Warna dominan (BGR): `{dom_color}`")
+
+                # 🔹 Logika adaptif
+                if homogen and cell_color_like:
+                    st.warning("🧫 Gambar terlalu homogen & warnanya mirip mikroskop — kemungkinan gambar sel.")
+                    continue
+                elif homogen and not cell_color_like:
+                    st.info("🌈 Gambar agak polos tapi warnanya bukan khas mikroskop — tetap dilanjutkan.")
+
+                # 🔹 Jalankan YOLO
                 results = yolo_model(img, conf=0.7, iou=0.5)
                 det = results[0].boxes
 
