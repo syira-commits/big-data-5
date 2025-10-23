@@ -101,45 +101,50 @@ if uploaded_file is not None:
     COLOR_STD_THRESHOLD = 15  # batas variasi warna (kaleng > 15, sel < 15)
 
     # ==========================
-    # MODE DETEKSI (YOLO)
-    # ==========================
-    if menu == "🎯 Deteksi Objek (YOLO)":
-        with st.spinner("🐱 Sedang mendeteksi objek..."):
-            # Filter gambar sel
-            if edge_density < EDGE_THRESHOLD and std_color < COLOR_STD_THRESHOLD:
-                st.warning("🧫 Gambar terlalu homogen — kemungkinan gambar sel mikroskop.")
-                st.stop()
-            else:
-                results = yolo_model(img)
-                boxes = results[0].boxes
-                names = results[0].names
+# MODE DETEKSI (YOLO)
+# ==========================
+if menu == "🎯 Deteksi Objek (YOLO)":
+    with st.spinner("🐱 Sedang mendeteksi objek..."):
 
-                allowed_labels = ["cocopham", "sprite"]
-                filtered = []
+        # 1️⃣ Cegah gambar sel homogen
+        if edge_density < EDGE_THRESHOLD and std_color < COLOR_STD_THRESHOLD:
+            st.warning("🧫 Gambar terlalu homogen — kemungkinan gambar sel mikroskop.")
+            st.stop()
 
-                if boxes is not None and len(boxes.data) > 0:
-                    for box in boxes.data.cpu().numpy():
-                        x1, y1, x2, y2, conf, cls_id = box
-                        label = names.get(int(cls_id), "Unknown")
-                        area = (x2 - x1) * (y2 - y1)
-                        img_area = gray.shape[0] * gray.shape[1]
-                        if (
-                            label in allowed_labels and
-                            conf > 0.5 and
-                            0.02 < area / img_area < 0.9
-                        ):
-                            filtered.append((label, conf, (x1, y1, x2, y2)))
+        # 2️⃣ Jalankan YOLO
+        results = yolo_model(img)
+        boxes = results[0].boxes
+        names = results[0].names
 
-                if len(filtered) == 0:
-                    st.warning("😿 Tidak ada objek Cocopham/Sprite terdeteksi.")
-                else:
-                    annotated = results[0].plot()
-                    st.image(annotated, caption="🎉 Hasil Deteksi!", use_container_width=True)
-                    st.success("✨ Objek berhasil dideteksi!")
-                    st.dataframe({
-                        "Class": [f[0] for f in filtered],
-                        "Confidence": [round(float(f[1]), 2) for f in filtered],
-                    })
+        allowed_labels = ["cocopham", "sprite"]
+        filtered_boxes = []
+
+        # 3️⃣ Filter hanya label yang diizinkan
+        if boxes is not None and len(boxes.data) > 0:
+            for box in boxes.data.cpu().numpy():
+                x1, y1, x2, y2, conf, cls_id = box
+                label = names.get(int(cls_id), "Unknown")
+
+                if label in allowed_labels and conf > 0.5:
+                    filtered_boxes.append((label, conf, (x1, y1, x2, y2)))
+
+        # 4️⃣ Jika tidak ada deteksi valid
+        if len(filtered_boxes) == 0:
+            st.warning("😿 Tidak ada objek Cocopham/Sprite terdeteksi.")
+        else:
+            # 5️⃣ Buat ulang anotasi hanya untuk label valid
+            annotated_img = np.array(img_cv).copy()
+            for (label, conf, (x1, y1, x2, y2)) in filtered_boxes:
+                cv2.rectangle(annotated_img, (int(x1), int(y1)), (int(x2), int(y2)), (255, 105, 180), 3)
+                cv2.putText(annotated_img, f"{label} {conf:.2f}", (int(x1), int(y1)-10),
+                            cv2.FONT_HERSHEY_SIMPLEX, 0.8, (255, 20, 147), 2)
+
+            st.image(annotated_img, caption="🎀 Hasil Deteksi Valid 🎀", use_container_width=True)
+            st.success("✨ Objek Cocopham/Sprite berhasil dideteksi!")
+            st.dataframe({
+                "Class": [f[0] for f in filtered_boxes],
+                "Confidence": [round(float(f[1]), 2) for f in filtered_boxes],
+            })
 
     # ==========================
     # MODE KLASIFIKASI
