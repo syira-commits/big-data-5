@@ -7,51 +7,58 @@ from PIL import Image
 import cv2
 
 # ==========================
-# Konfigurasi Dashboard
+# CONFIG PAGE
 # ==========================
-st.set_page_config(page_title="CuteVision App", page_icon="🐱", layout="centered")
+st.set_page_config(
+    page_title="🐾 CuteVision App",
+    page_icon="🐱",
+    layout="centered",
+    initial_sidebar_state="expanded"
+)
 
 # ==========================
-# CSS (Tema Pastel Ungu-Pink + Background)
+# CUSTOM STYLE (WARNA NGEJRENG)
 # ==========================
 st.markdown("""
     <style>
-    /* Background utama */
-    .main {
-        background: linear-gradient(135deg, #FAF7FF 0%, #FFF0F5 100%);
-    }
-    /* Sidebar */
-    [data-testid="stSidebar"] {
-        background-color: #F4EAFB;
-    }
-    /* Heading */
-    h1, h2, h3, h4, h5 {
-        color: #4B2E83;
-        font-family: "Poppins", sans-serif;
-    }
-    /* Tombol */
-    .stButton>button {
-        background-color: #CDB4DB;
-        color: white;
-        border-radius: 12px;
-        font-weight: bold;
-        transition: 0.3s;
-    }
-    .stButton>button:hover {
-        background-color: #B5838D;
-        color: #fff;
-    }
-    /* File uploader area */
-    div[data-testid="stFileUploaderDropzone"] {
-        border: 2px dashed #B5838D;
-        border-radius: 15px;
-        background-color: #FFF8FB;
-    }
+        body {
+            background: linear-gradient(135deg, #FFDEE9, #B5FFFC);
+            color: #333333;
+        }
+        .title {
+            text-align: center;
+            font-size: 36px;
+            font-weight: bold;
+            color: #FF4081;
+            text-shadow: 1px 1px 2px #00000030;
+        }
+        .subtitle {
+            text-align: center;
+            color: #00BFA6;
+            font-size: 18px;
+            margin-bottom: 25px;
+        }
+        .sidebar .sidebar-content {
+            background: linear-gradient(180deg, #FFB6C1, #FFF5EE);
+            color: black;
+        }
+        .stButton button {
+            background-color: #FF4081;
+            color: white;
+            border-radius: 10px;
+            border: none;
+            font-weight: bold;
+            transition: 0.3s;
+        }
+        .stButton button:hover {
+            background-color: #00BFA6;
+            color: white;
+        }
     </style>
 """, unsafe_allow_html=True)
 
 # ==========================
-# Load Models
+# LOAD MODELS
 # ==========================
 @st.cache_resource
 def load_models():
@@ -62,41 +69,24 @@ def load_models():
 yolo_model, classifier = load_models()
 
 # ==========================
-# Tampilan Dashboard
+# TAMPILAN DASHBOARD
 # ==========================
-st.title("🐾 CuteVision App — Deteksi & Klasifikasi Gambar Lucu")
-st.markdown("Aplikasi ini menggunakan YOLO untuk mendeteksi objek dan CNN (TensorFlow) untuk mengklasifikasi gambar. Cocok untuk yang suka hal-hal lucu tapi tetap cerdas!")
+st.markdown('<h1 class="title">🐾 CuteVision App</h1>', unsafe_allow_html=True)
+st.markdown('<p class="subtitle">Deteksi dan Klasifikasi Gambar Lucu dengan Kecerdasan Buatan 💖</p>', unsafe_allow_html=True)
 
 menu = st.sidebar.radio("🌈 Pilih Mode:", ["🎯 Deteksi Objek (YOLO)", "🧩 Klasifikasi Gambar"])
 st.sidebar.markdown("---")
-st.sidebar.info("Unggah gambar dan lihat keajaiban AI bekerja!")
+
+# Deskripsi tambahan
+if menu == "🎯 Deteksi Objek (YOLO)":
+    st.info("✨ Mode ini digunakan untuk **mendeteksi objek 'Cocopham' dan 'Sprite'** dalam gambar.")
+else:
+    st.info("🧬 Mode ini digunakan untuk **mengklasifikasi gambar sel sebagai 'Uninfected' atau 'Parasitized'**.")
 
 uploaded_file = st.file_uploader("📤 Unggah Gambar di Sini", type=["jpg", "jpeg", "png"])
 
 # ==========================
-# Contoh Gambar per Mode
-# ==========================
-if menu == "🎯 Deteksi Objek (YOLO)":
-    st.subheader("🪄 Contoh Deteksi Objek")
-    st.markdown("Mode ini digunakan untuk **mendeteksi objek seperti gambar CocoPham & Sprite** menggunakan YOLO.")
-    col1, col2 = st.columns(2)
-    with col1:
-        st.image("contoh/cocopham.jpg", caption="Contoh Gambar: CocoPham", use_container_width=True)
-    with col2:
-        st.image("contoh/sprite.jpg", caption="Contoh Gambar: Sprite", use_container_width=True)
-else:
-    st.subheader("🔬 Contoh Klasifikasi Gambar")
-    st.markdown("Mode ini digunakan untuk **mengklasifikasikan gambar sel**, seperti **Uninfected** dan **Parasitized** menggunakan CNN.")
-    col1, col2 = st.columns(2)
-    with col1:
-        st.image("contoh/uninfected.png", caption="Sel Uninfected", use_container_width=True)
-    with col2:
-        st.image("contoh/parasitized.png", caption="Sel Parasitized", use_container_width=True)
-
-st.write("---")
-
-# ==========================
-# Proses Gambar
+# PROSES GAMBAR
 # ==========================
 if uploaded_file is not None:
     img = Image.open(uploaded_file)
@@ -139,10 +129,11 @@ if uploaded_file is not None:
                             filtered.append((label, float(conf), (x1, y1, x2, y2)))
 
                 if len(filtered) == 0:
-                    st.warning("😿 Tidak ada objek terdeteksi (hanya mendeteksi CocoPham & Sprite)")
+                    st.warning("😿 Tidak ada objek terdeteksi.\nYOLO hanya mendeteksi **Cocopham & Sprite**.")
                 else:
                     annotated_img = results[0].plot()
                     st.image(annotated_img, caption="🎉 Hasil Deteksi!", use_container_width=True)
+
                     st.subheader("📋 Detail Deteksi")
                     st.dataframe({
                         "Class": [f[0] for f in filtered],
@@ -172,14 +163,17 @@ if uploaded_file is not None:
                 confidence = np.max(prediction)
 
             st.success("🎊 Prediksi Berhasil!")
-            st.write("Hasil Prediksi:", label)
-            st.write("Probabilitas:", f"{confidence:.2f}")
+            st.markdown(f"**🧬 Hasil Prediksi:** `{label}`")
+            st.markdown(f"**🔮 Probabilitas:** `{confidence:.2f}`")
 
 else:
     st.info("Silakan unggah gambar terlebih dahulu 💡")
 
 # ==========================
-# Footer lucu
+# FOOTER LUCU
 # ==========================
 st.markdown("---")
-st.caption("🐾 Dibuat oleh Mulya Syira — Dashboard lucu tapi cerdas menggunakan Streamlit, YOLO & TensorFlow.")
+st.markdown(
+    "<div style='text-align:center; color:#FF4081;'>🐾 Dibuat oleh <b>Mulya Syira</b> — Dashboard lucu tapi cerdas menggunakan Streamlit, YOLO & TensorFlow 💖</div>",
+    unsafe_allow_html=True
+)
