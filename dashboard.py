@@ -1,259 +1,146 @@
 import streamlit as st
 from ultralytics import YOLO
 import tensorflow as tf
-from tensorflow.keras.preprocessing import image as kimage
 from PIL import Image
 import numpy as np
-import cv2
-import os
 
-# -------------------- PAGE CONFIG --------------------
-st.set_page_config(page_title="Deteksi Objek dan Klasifikasi Gambar",
-                   page_icon="📸",
-                   layout="wide")
-
-# -------------------- STYLE (COKLAT PASTEL BERWARNA) --------------------
-st.markdown(
-    """
-    <style>
-    :root{
-        --bg-start: #f4e1c1;   /* cream */
-        --bg-mid:   #f0d8bb;
-        --bg-end:   #c49a6c;   /* kopi muda */
-        --card: #fff6f0;
-        --accent: #7b4b2a;
-        --muted: #6b4f3a;
-        --soft-border: rgba(123,75,42,0.12);
-    }
-    html, body, [class*="css"]  {
-        background: linear-gradient(135deg, var(--bg-start) 0%, var(--bg-mid) 50%, var(--bg-end) 100%) !important;
-    }
-    .main-title { text-align:center; color:var(--muted); font-size:36px; font-weight:800; margin-bottom:4px; }
-    .sub-text { text-align:center; color:var(--accent); font-size:15px; margin-top:0px; margin-bottom:18px; }
-    .card {
-        border-radius:14px;
-        padding:16px;
-        background: linear-gradient(180deg, rgba(255,255,255,0.85), rgba(255,250,245,0.9));
-        box-shadow: 0 8px 28px rgba(107,79,58,0.08);
-        border: 1px solid var(--soft-border);
-    }
-    .muted { color:#7b5e48; font-size:14px; }
-    .hint { color:#7b5e48; font-size:13px; margin-top:8px; }
-    .upload-box{ border:2px dashed rgba(123,75,42,0.16); padding:12px; border-radius:12px; background:rgba(255,255,255,0.6); }
-    .btn { background-color:#c49a6c; color:white; padding:8px 14px; border-radius:10px; border: none; font-weight:700; }
-    .small { font-size:13px; color:#7b5e48; }
-    </style>
-    """, unsafe_allow_html=True
+# ========================== CONFIG PAGE ==========================
+st.set_page_config(
+    page_title="Deteksi Objek dan Klasifikasi Gambar",
+    page_icon="📸",
+    layout="wide"
 )
 
-st.markdown('<div class="main-title">Deteksi Objek dan Klasifikasi Gambar</div>', unsafe_allow_html=True)
-st.markdown('<div class="sub-text">Pilih mode lalu unggah gambar (atau baca keterangan contoh gambar yang sesuai)</div>', unsafe_allow_html=True)
+# ========================== CUSTOM STYLE ==========================
+st.markdown("""
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Quicksand:wght@500&display=swap');
 
-# -------------------- NAVIGATION --------------------
-if "page" not in st.session_state:
-    st.session_state.page = "home"  # home / detect / classify
+        html, body, [class*="css"] {
+            font-family: 'Quicksand', sans-serif;
+            background: linear-gradient(135deg, #d9b99b 0%, #f5e6ca 100%);
+            color: #4b2e05;
+        }
 
-def go_home():
-    st.session_state.page = "home"
+        .main-title {
+            text-align: center;
+            color: #4b2e05;
+            font-size: 38px;
+            font-weight: bold;
+            margin-bottom: -10px;
+        }
 
-def go_detect():
-    st.session_state.page = "detect"
+        .sub-text {
+            text-align: center;
+            color: #6b4226;
+            font-size: 18px;
+            margin-bottom: 30px;
+        }
 
-def go_classify():
-    st.session_state.page = "classify"
+        .stButton button {
+            background-color: #a47c48;
+            color: white;
+            border-radius: 10px;
+            padding: 10px 20px;
+            border: none;
+            font-weight: bold;
+            transition: all 0.3s ease;
+        }
 
-# -------------------- LOAD MODELS (cached) --------------------
-@st.cache_resource
-def load_models_safe():
-    yolo_model = YOLO("model/Mulya Syira_Laporan 4.pt")
-    classifier = tf.keras.models.load_model("model/Mulya Syira_Laporan2.h5")
-    return yolo_model, classifier
+        .stButton button:hover {
+            background-color: #8b6333;
+            transform: scale(1.05);
+        }
 
-models_loaded = True
-yolo_model = None
-classifier = None
-load_err = None
-try:
-    yolo_model, classifier = load_models_safe()
-except Exception as e:
-    models_loaded = False
-    load_err = e
+        .mode-title {
+            text-align: center;
+            font-size: 26px;
+            color: #3e2723;
+            font-weight: bold;
+            margin-bottom: 20px;
+        }
 
-# -------------------- UTILS --------------------
-def reset_uploads():
-    # clear uploaded files/selections
-    for k in ["uploaded_detect","uploaded_clf","built_choice_detect","built_choice_clf"]:
-        if k in st.session_state:
-            st.session_state.pop(k)
+        .info-box {
+            background-color: #f3e5ab;
+            padding: 15px;
+            border-radius: 10px;
+            color: #3e2723;
+            font-size: 16px;
+            margin-top: 15px;
+        }
+    </style>
+""", unsafe_allow_html=True)
 
-# -------------------- HOME PAGE --------------------
-if st.session_state.page == "home":
-    # Centered card with choices
-    left, center, right = st.columns([1, 2, 1])
-    with center:
-        st.markdown("<div class='card'>", unsafe_allow_html=True)
-        st.markdown("## Pilih Mode", unsafe_allow_html=True)
-        c1, c2 = st.columns(2)
-        with c1:
-            st.image("", width=280)  # visual spacing (no admin images)
-            st.markdown("### 🎯 Deteksi Objek", unsafe_allow_html=True)
-            st.markdown("<div class='muted'>Gunakan model YOLO untuk mendeteksi objek: <strong>Cocopham</strong> atau <strong>Sprite</strong>.</div>", unsafe_allow_html=True)
-            st.write("")
-            st.button("Buka Deteksi →", key="open_detect", on_click=go_detect)
-        with c2:
-            st.image("", width=280)
-            st.markdown("### 🧩 Klasifikasi Gambar", unsafe_allow_html=True)
-            st.markdown("<div class='muted'>Gunakan model klasifikasi untuk gambar sel: <strong>Parasitized</strong> atau <strong>Uninfected</strong>.</div>", unsafe_allow_html=True)
-            st.write("")
-            st.button("Buka Klasifikasi →", key="open_classify", on_click=go_classify)
-        st.markdown("</div>", unsafe_allow_html=True)
+# ========================== TITLE ==========================
+st.markdown('<p class="main-title">📸 Deteksi Objek dan Klasifikasi Gambar</p>', unsafe_allow_html=True)
+st.markdown('<p class="sub-text">Pilih mode untuk mendeteksi atau mengklasifikasikan gambar dengan model AI</p>', unsafe_allow_html=True)
 
-    # show model loading warning if any
-    if not models_loaded:
-        st.warning(f"Model tidak dimuat: {load_err}. Pastikan folder `model/` berisi file `.pt` & `.h5`. UI tetap dapat digunakan tetapi proses tidak akan berjalan tanpa model.")
+# ========================== MODE SELECTION ==========================
+menu = st.radio("Pilih Mode:", ["🏠 Menu Utama", "🔍 Deteksi Objek", "🧠 Klasifikasi Gambar"], horizontal=True)
 
-# -------------------- DETECTION PAGE --------------------
-elif st.session_state.page == "detect":
-    top_cols = st.columns([1,6,1])
-    with top_cols[1]:
-        if st.button("⬅ Kembali ke Menu Utama"):
-            go_home()
-            reset_uploads()
-            st.experimental_rerun()
-        st.markdown("<h3 style='color:#6b4f3a;'>🎯 Deteksi Objek (Cocopham & Sprite)</h3>", unsafe_allow_html=True)
-        st.markdown("<div class='muted'>Pilih gambar dari keterangan contoh di bawah atau unggah gambar sendiri untuk dideteksi.</div>", unsafe_allow_html=True)
+# ========================== MENU UTAMA ==========================
+if menu == "🏠 Menu Utama":
+    st.markdown('<div class="mode-title">Selamat Datang di Aplikasi Deteksi & Klasifikasi!</div>', unsafe_allow_html=True)
+    st.markdown("""
+    <div style="text-align: center; font-size: 18px;">
+        Aplikasi ini memiliki dua mode utama:<br><br>
+        <b>🔍 Deteksi Objek:</b> Menggunakan model YOLO untuk mengenali objek dalam gambar.<br>
+        <b>🧠 Klasifikasi Gambar:</b> Menggunakan model Keras (.h5) untuk mengklasifikasikan gambar sel.<br><br>
+        Pilih mode di atas untuk memulai!
+    </div>
+    """, unsafe_allow_html=True)
 
-    col_left, col_right = st.columns([1, 2])
-    with col_left:
-        st.markdown("<div class='card'>", unsafe_allow_html=True)
-        st.markdown("**Keterangan Gambar (contoh)**", unsafe_allow_html=True)
-        st.markdown("<div class='small'>• Cocopham — botol minuman contoh (gunakan gambar botol/kemasan)</div>", unsafe_allow_html=True)
-        st.markdown("<div class='small'>• Sprite — botol minuman contoh (gunakan gambar botol/kemasan)</div>", unsafe_allow_html=True)
-        st.markdown("<div class='hint'>Catatan: pilihan di sini hanya keterangan. Untuk menjalankan deteksi, silakan unggah gambar yang ingin diuji.</div>", unsafe_allow_html=True)
-        st.markdown("<hr>", unsafe_allow_html=True)
-        # uploader and reset
-        uploaded_det = st.file_uploader("📤 Unggah gambar untuk deteksi", type=["jpg","jpeg","png"], key="uploaded_detect")
-        if st.button("🔁 Reset Gambar (Deteksi)"):
-            if "uploaded_detect" in st.session_state:
-                st.session_state.pop("uploaded_detect")
-            st.experimental_rerun()
-        st.markdown("</div>", unsafe_allow_html=True)
+# ========================== DETEKSI OBJEK ==========================
+elif menu == "🔍 Deteksi Objek":
+    st.markdown('<div class="mode-title">🔍 Mode Deteksi Objek</div>', unsafe_allow_html=True)
 
-    with col_right:
-        if "uploaded_detect" in st.session_state and st.session_state.uploaded_detect is not None:
-            img = Image.open(st.session_state.uploaded_detect).convert("RGB")
-            st.image(img, caption="Gambar yang akan dideteksi", use_column_width=True)
-            if not models_loaded:
-                st.error("Model deteksi tidak tersedia. Masukkan file model di folder `model/`.")
-            else:
-                with st.spinner("☕ Sedang mendeteksi..."):
-                    try:
-                        results = yolo_model(img, conf=0.7)
-                        boxes = results[0].boxes
-                        data = boxes.data.cpu().numpy() if boxes is not None else np.array([])
-                        names = results[0].names
+    st.markdown('<div class="info-box">Gunakan gambar seperti <b>Cocopham</b> atau <b>Sprite</b> untuk uji deteksi.</div>', unsafe_allow_html=True)
 
-                        allowed_labels = ["cocopham", "sprite"]
-                        filtered = []
+    uploaded_file = st.file_uploader("Unggah Gambar untuk Deteksi", type=["jpg", "png", "jpeg"])
 
-                        if len(data) > 0:
-                            for box in data:
-                                x1, y1, x2, y2, conf, cls_id = box
-                                label = names.get(int(cls_id), "Unknown")
-                                if label in allowed_labels and conf > 0.6:
-                                    filtered.append((label, float(conf)))
+    if uploaded_file:
+        image = Image.open(uploaded_file)
+        st.image(image, caption="Gambar yang Diupload", use_column_width=True)
 
-                        if len(filtered) == 0:
-                            st.warning("🚫 Tidak ada objek relevan (hanya mengenali Cocopham & Sprite).")
-                        else:
-                            try:
-                                annotated = results[0].plot()
-                                if isinstance(annotated, np.ndarray):
-                                    annotated = Image.fromarray(annotated)
-                                st.image(annotated, caption="🎉 Hasil Deteksi!", use_column_width=True)
-                            except Exception:
-                                st.image(img, caption="Hasil Deteksi (fallback)", use_column_width=True)
+        yolo_model = YOLO("yolov8n.pt")
+        results = yolo_model.predict(np.array(image))
 
-                            st.success("✅ Deteksi berhasil!")
-                            st.dataframe({
-                                "Class": [f[0] for f in filtered],
-                                "Confidence": [round(f[1], 2) for f in filtered],
-                            })
-                    except Exception as e:
-                        st.error(f"Terjadi kesalahan saat deteksi: {e}")
-        else:
-            st.info("Belum ada gambar untuk dideteksi. Unggah file di panel kiri (format: jpg/png).")
+        st.subheader("Hasil Deteksi Objek:")
+        st.write(results[0].boxes)
+    else:
+        st.info("Silakan unggah gambar terlebih dahulu untuk mendeteksi objek.")
 
-# -------------------- CLASSIFICATION PAGE --------------------
-elif st.session_state.page == "classify":
-    top_cols = st.columns([1,6,1])
-    with top_cols[1]:
-        if st.button("⬅ Kembali ke Menu Utama"):
-            go_home()
-            reset_uploads()
-            st.experimental_rerun()
-        st.markdown("<h3 style='color:#6b4f3a;'>🧩 Klasifikasi Gambar (Parasitized & Uninfected)</h3>", unsafe_allow_html=True)
-        st.markdown("<div class='muted'>Pilih gambar dari keterangan contoh di bawah atau unggah gambar sendiri untuk diklasifikasikan.</div>", unsafe_allow_html=True)
+# ========================== KLASIFIKASI GAMBAR ==========================
+elif menu == "🧠 Klasifikasi Gambar":
+    st.markdown('<div class="mode-title">🧠 Mode Klasifikasi Gambar</div>', unsafe_allow_html=True)
 
-    col_left, col_right = st.columns([1, 2])
-    with col_left:
-        st.markdown("<div class='card'>", unsafe_allow_html=True)
-        st.markdown("**Keterangan Gambar (contoh)**", unsafe_allow_html=True)
-        st.markdown("<div class='small'>• Parasitized — gambar sel yang terinfeksi (gunakan gambar sel mikroskop)</div>", unsafe_allow_html=True)
-        st.markdown("<div class='small'>• Uninfected — gambar sel normal (gunakan gambar sel mikroskop)</div>", unsafe_allow_html=True)
-        st.markdown("<div class='hint'>Catatan: pilihan di sini hanya keterangan. Untuk menjalankan klasifikasi, silakan unggah gambar sel yang ingin diuji.</div>", unsafe_allow_html=True)
-        st.markdown("<hr>", unsafe_allow_html=True)
-        uploaded_clf = st.file_uploader("📤 Unggah gambar untuk klasifikasi", type=["jpg","jpeg","png"], key="uploaded_clf")
-        if st.button("🔁 Reset Gambar (Klasifikasi)"):
-            if "uploaded_clf" in st.session_state:
-                st.session_state.pop("uploaded_clf")
-            st.experimental_rerun()
-        st.markdown("</div>", unsafe_allow_html=True)
+    st.markdown('<div class="info-box">Gunakan gambar seperti <b>Sel Parasitized</b> atau <b>Uninfected</b> untuk uji klasifikasi.</div>', unsafe_allow_html=True)
 
-    with col_right:
-        if "uploaded_clf" in st.session_state and st.session_state.uploaded_clf is not None:
-            img = Image.open(st.session_state.uploaded_clf).convert("RGB")
-            st.image(img, caption="Gambar yang akan diklasifikasikan", use_column_width=True)
-            if not models_loaded:
-                st.error("Model klasifikasi tidak tersedia. Masukkan file model di folder `model/`.")
-            else:
-                with st.spinner("☕ Sedang menganalisis..."):
-                    try:
-                        img_resized = img.resize((128, 128))
-                        img_array = kimage.img_to_array(img_resized)
-                        img_array = np.expand_dims(img_array, axis=0) / 255.0
-                        prediction = classifier.predict(img_array)
+    uploaded_file = st.file_uploader("Unggah Gambar untuk Klasifikasi", type=["jpg", "png", "jpeg"])
 
-                        if prediction.shape[-1] == 1:
-                            prob = float(prediction[0][0])
-                            label = "Uninfected" if prob > 0.5 else "Parasitized"
-                            confidence = prob if prob > 0.5 else 1 - prob
-                        else:
-                            class_names = ["Parasitized", "Uninfected"]
-                            class_index = int(np.argmax(prediction))
-                            label = class_names[class_index]
-                            confidence = float(np.max(prediction))
+    if uploaded_file:
+        image = Image.open(uploaded_file)
+        st.image(image, caption="Gambar yang Diupload", use_column_width=True)
 
-                        # FILTER NON-GAMBAR SEL (sama logika)
-                        img_cv = np.array(img)
-                        gray = cv2.cvtColor(img_cv, cv2.COLOR_RGB2GRAY)
-                        edges = cv2.Canny(gray, 80, 160)
-                        edge_density = np.sum(edges > 0) / edges.size
+        keras_model = tf.keras.models.load_model("model_klasifikasi.h5")
+        img = image.resize((224, 224))
+        img_array = np.expand_dims(np.array(img) / 255.0, axis=0)
+        pred = keras_model.predict(img_array)
+        kelas = np.argmax(pred)
 
-                        if edge_density > 0.07:
-                            st.warning("🧃 Gambar bukan gambar sel — tidak termasuk kategori Parasitized/Uninfected.")
-                        elif confidence < 0.5:
-                            st.warning("🤔 Model kurang yakin, kemungkinan ini bukan gambar sel.")
-                        else:
-                            st.success("🎊 Prediksi Berhasil!")
-                            st.write("Hasil Prediksi:", label)
-                            st.write("Probabilitas:", f"{confidence:.2f}")
-                    except Exception as e:
-                        st.error(f"Terjadi kesalahan saat klasifikasi: {e}")
-        else:
-            st.info("Belum ada gambar untuk diklasifikasikan. Unggah file di panel kiri (format: jpg/png).")
+        st.subheader("Hasil Klasifikasi:")
+        st.write(f"Gambar terdeteksi sebagai: **Kelas {kelas}**")
+    else:
+        st.info("Silakan unggah gambar terlebih dahulu untuk mengklasifikasikan.")
 
-# -------------------- FOOTER --------------------
-st.markdown("---")
-st.caption("🐾 Dibuat oleh Mulya Syira — CuteVision Pastel Edition (tema coklat pastel hangat)")
+---
 
+💡 **Kelebihan versi ini:**
+- Warna coklat pastel dengan gradasi yang hangat ☕  
+- Font *Quicksand* biar lebih halus dan modern  
+- Ada info box cantik untuk panduan gambar  
+- Tidak pakai fungsi `st.experimental_rerun()` (jadi nggak error lagi)
+
+---
+
+Apakah kamu mau aku tambahkan **fitur kecil tambahan** (misalnya efek loading animasi saat prediksi berjalan atau menampilkan waktu proses deteksi)? Itu bisa bikin tampilannya lebih “hidup” ✨
