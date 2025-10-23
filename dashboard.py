@@ -9,53 +9,46 @@ import cv2
 # ==========================
 # CONFIG PAGE
 # ==========================
-st.set_page_config(
-    page_title="🐾 CuteVision App",
-    page_icon="🐱",
-    layout="centered",
-    initial_sidebar_state="expanded"
-)
+st.set_page_config(page_title="Dashboard Deteksi & Klasifikasi Gambar AI", page_icon="🤖", layout="centered")
 
 # ==========================
-# CUSTOM STYLE (WARNA NGEJRENG)
+# STYLE: BACKGROUND & WARNA
 # ==========================
 st.markdown("""
-    <style>
-        body {
-            background: linear-gradient(135deg, #FFDEE9, #B5FFFC);
-            color: #333333;
-        }
-        .title {
-            text-align: center;
-            font-size: 36px;
-            font-weight: bold;
-            color: #FF4081;
-            text-shadow: 1px 1px 2px #00000030;
-        }
-        .subtitle {
-            text-align: center;
-            color: #00BFA6;
-            font-size: 18px;
-            margin-bottom: 25px;
-        }
-        .sidebar .sidebar-content {
-            background: linear-gradient(180deg, #FFB6C1, #FFF5EE);
-            color: black;
-        }
-        .stButton button {
-            background-color: #FF4081;
-            color: white;
-            border-radius: 10px;
-            border: none;
-            font-weight: bold;
-            transition: 0.3s;
-        }
-        .stButton button:hover {
-            background-color: #00BFA6;
-            color: white;
-        }
-    </style>
+<style>
+    [data-testid="stAppViewContainer"] {
+        background: linear-gradient(135deg, #A1FFCE, #FAFFD1);
+        background-attachment: fixed;
+    }
+    .stButton button {
+        background-color: #FF4081;
+        color: white;
+        border-radius: 10px;
+        border: none;
+        font-weight: bold;
+        transition: 0.3s;
+    }
+    .stButton button:hover {
+        background-color: #00BFA6;
+        color: white;
+    }
+    .stDataFrame {
+        background-color: white;
+        border-radius: 10px;
+    }
+</style>
 """, unsafe_allow_html=True)
+
+# ==========================
+# HEADER
+# ==========================
+st.markdown("""
+<div style="background-color:#FF9A9E; padding:12px; border-radius:10px; text-align:center; color:white; font-size:22px; font-weight:bold;">
+    🌟 Dashboard Deteksi & Klasifikasi Gambar AI 🌟
+</div>
+""", unsafe_allow_html=True)
+
+st.markdown("")
 
 # ==========================
 # LOAD MODELS
@@ -69,20 +62,25 @@ def load_models():
 yolo_model, classifier = load_models()
 
 # ==========================
-# TAMPILAN DASHBOARD
+# SIDEBAR
 # ==========================
-st.markdown('<h1 class="title">🐾 CuteVision App</h1>', unsafe_allow_html=True)
-st.markdown('<p class="subtitle">Deteksi dan Klasifikasi Gambar Lucu dengan Kecerdasan Buatan 💖</p>', unsafe_allow_html=True)
-
-menu = st.sidebar.radio("🌈 Pilih Mode:", ["🎯 Deteksi Objek (YOLO)", "🧩 Klasifikasi Gambar"])
+st.sidebar.markdown("## 🧭 Navigasi")
+menu = st.sidebar.radio("Pilih Mode:", ["🎯 Deteksi Objek (YOLO)", "🧩 Klasifikasi Gambar"])
 st.sidebar.markdown("---")
+st.sidebar.info("📂 Unggah gambar, lalu jalankan deteksi atau klasifikasi.")
+st.sidebar.markdown("🧑‍💻 Dibuat oleh **Mulya Syira**")
 
-# Deskripsi tambahan
+# ==========================
+# DESKRIPSI MODE
+# ==========================
 if menu == "🎯 Deteksi Objek (YOLO)":
     st.info("✨ Mode ini digunakan untuk **mendeteksi objek 'Cocopham' dan 'Sprite'** dalam gambar.")
 else:
     st.info("🧬 Mode ini digunakan untuk **mengklasifikasi gambar sel sebagai 'Uninfected' atau 'Parasitized'**.")
 
+# ==========================
+# UNGGAH GAMBAR
+# ==========================
 uploaded_file = st.file_uploader("📤 Unggah Gambar di Sini", type=["jpg", "jpeg", "png"])
 
 # ==========================
@@ -90,21 +88,18 @@ uploaded_file = st.file_uploader("📤 Unggah Gambar di Sini", type=["jpg", "jpe
 # ==========================
 if uploaded_file is not None:
     img = Image.open(uploaded_file)
-    st.image(img, caption="✨ Gambar yang Diupload ✨", use_container_width=True)
+    st.image(img, caption="🖼️ Gambar yang Diupload", use_container_width=True)
 
-    # ==========================
-    # MODE DETEKSI OBJEK
-    # ==========================
+    # MODE DETEKSI
     if menu == "🎯 Deteksi Objek (YOLO)":
-        with st.spinner("🐱 Sedang mendeteksi objek... tunggu sebentar ya!"):
-            # Konversi ke OpenCV
+        with st.spinner("🔍 Sedang mendeteksi objek..."):
             img_cv = np.array(img.convert("RGB"))
             gray = cv2.cvtColor(img_cv, cv2.COLOR_RGB2GRAY)
             edges = cv2.Canny(gray, 100, 200)
             edge_density = np.sum(edges > 0) / (gray.shape[0] * gray.shape[1])
 
             if edge_density > 0.12:
-                st.warning("📄 Gambar terdeteksi sebagai teks/grafik — tidak ada objek yang relevan 💤")
+                st.warning("📄 Gambar ini terdeteksi sebagai teks/grafik — tidak ada objek relevan 💤")
             else:
                 results = yolo_model(img)
                 boxes = results[0].boxes
@@ -120,31 +115,28 @@ if uploaded_file is not None:
                         label = names.get(int(cls_id), "Unknown")
                         area = (x2 - x1) * (y2 - y1)
                         img_area = gray.shape[0] * gray.shape[1]
-
                         if (
                             label in allowed_labels
                             and conf > 0.6
                             and 0.02 < area / img_area < 0.8
                         ):
-                            filtered.append((label, float(conf), (x1, y1, x2, y2)))
+                            filtered.append((label, float(conf)))
 
                 if len(filtered) == 0:
-                    st.warning("😿 Tidak ada objek terdeteksi.\nYOLO hanya mendeteksi **Cocopham & Sprite**.")
+                    st.warning("😿 Tidak ada objek terdeteksi (YOLO hanya mendeteksi **Cocopham & Sprite**).")
                 else:
                     annotated_img = results[0].plot()
-                    st.image(annotated_img, caption="🎉 Hasil Deteksi!", use_container_width=True)
-
+                    st.image(annotated_img, caption="🎉 Hasil Deteksi", use_container_width=True)
                     st.subheader("📋 Detail Deteksi")
                     st.dataframe({
                         "Class": [f[0] for f in filtered],
                         "Confidence": [round(f[1], 2) for f in filtered],
                     })
+                    st.balloons()
 
-    # ==========================
-    # MODE KLASIFIKASI GAMBAR
-    # ==========================
+    # MODE KLASIFIKASI
     elif menu == "🧩 Klasifikasi Gambar":
-        with st.spinner("🐶 Sedang memprediksi jenis gambar..."):
+        with st.spinner("🧠 Sedang memprediksi jenis gambar..."):
             img_resized = img.resize((128, 128))
             img_array = image.img_to_array(img_resized)
             img_array = np.expand_dims(img_array, axis=0)
@@ -162,18 +154,21 @@ if uploaded_file is not None:
                 label = class_names[class_index]
                 confidence = np.max(prediction)
 
-            st.success("🎊 Prediksi Berhasil!")
-            st.markdown(f"**🧬 Hasil Prediksi:** `{label}`")
-            st.markdown(f"**🔮 Probabilitas:** `{confidence:.2f}`")
+            st.success("✅ Prediksi Berhasil!")
+            st.write(f"**Hasil Prediksi:** {label}")
+            st.write(f"**Probabilitas:** {confidence:.2f}")
+            st.markdown("### 🔮 Tingkat Keyakinan Model:")
+            st.progress(float(confidence))
+            st.snow()
 
 else:
     st.info("Silakan unggah gambar terlebih dahulu 💡")
 
 # ==========================
-# FOOTER LUCU
+# FOOTER
 # ==========================
-st.markdown("---")
-st.markdown(
-    "<div style='text-align:center; color:#FF4081;'>🐾 Dibuat oleh <b>Mulya Syira</b> — Dashboard lucu tapi cerdas menggunakan Streamlit, YOLO & TensorFlow 💖</div>",
-    unsafe_allow_html=True
-)
+st.markdown("""
+<div style="background-color:#A1C4FD; padding:10px; border-radius:10px; text-align:center; color:white;">
+    💻 Dibuat oleh <b>Mulya Syira</b> | Streamlit + YOLO + TensorFlow
+</div>
+""", unsafe_allow_html=True)
