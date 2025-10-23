@@ -5,7 +5,9 @@ from tensorflow.keras.preprocessing import image
 import numpy as np
 from PIL import Image
 import cv2
-
+import os
+os.environ["OPENCV_VIDEOIO_PRIORITY_MSMF"] = "0"  # cegah error kamera
+os.environ["QT_QPA_PLATFORM"] = "offscreen"       # cegah error GUI
 # ==========================
 # Load Models
 # ==========================
