@@ -6,7 +6,6 @@ import numpy as np
 from PIL import Image
 import time
 import matplotlib.pyplot as plt
-import plotly.express as px
 
 # ==========================
 # KONFIGURASI HALAMAN
@@ -107,9 +106,37 @@ if menu in ["Deteksi Objek (YOLO)", "Klasifikasi Gambar"]:
                     # MODE DETEKSI OBJEK
                     # ==========================
                     if menu == "Deteksi Objek (YOLO)":
-                        results = yolo_model(img)
-                        result_img = results[0].plot()
-                        st.image(result_img, caption="🎀 Hasil Deteksi Objek 🎀", use_container_width=True)
+                        results = yolo_model.predict(img, conf=0.7, iou=0.4)
+                        names = results[0].names
+                        allowed_labels = ["cocopham", "sprite"]
+                        filtered = []
+
+                        # Filter hasil deteksi
+                        for box in results[0].boxes:
+                            cls_id = int(box.cls)
+                            conf = float(box.conf)
+                            label = names.get(cls_id, "Unknown")
+
+                            if label not in allowed_labels or conf < 0.6:
+                                # Hapus deteksi yang tidak termasuk
+                                box.conf[:] = 0
+                            else:
+                                x1, y1, x2, y2 = box.xyxy[0]
+                                filtered.append((label, conf, (x1, y1, x2, y2)))
+
+                        # Tampilkan hasil hanya jika ada deteksi valid
+                        if len(filtered) == 0:
+                            st.warning("😿 Tidak ada objek terdeteksi (hanya mendeteksi Cocopham & Sprite)")
+                        else:
+                            annotated_img = results[0].plot()
+                            st.image(annotated_img, caption="🎀 Hasil Deteksi Objek 🎀", use_container_width=True)
+
+                            st.subheader("📋 Detail Deteksi")
+                            st.dataframe({
+                                "Class": [f[0] for f in filtered],
+                                "Confidence": [round(f[1], 2) for f in filtered],
+                            })
+
                         st.success("✨ Deteksi selesai dengan sukses! ✨")
                         st.markdown("💡 *Saran:* Jika hasil kurang akurat, coba gambar dengan pencahayaan lebih terang 🌞")
 
@@ -117,25 +144,20 @@ if menu in ["Deteksi Objek (YOLO)", "Klasifikasi Gambar"]:
                     # MODE KLASIFIKASI GAMBAR
                     # ==========================
                     elif menu == "Klasifikasi Gambar":
-                        # Ubah ukuran gambar ke 128x128 (sesuai model kamu)
                         img_resized = img.resize((128, 128))
                         img_array = image.img_to_array(img_resized)
                         img_array = np.expand_dims(img_array, axis=0) / 255.0
 
-                        # Prediksi
                         prediction = classifier.predict(img_array)
                         class_index = np.argmax(prediction)
                         confidence = np.max(prediction)
 
-                        # 🔸 Mapping label sesuai urutan waktu training
-                        labels = ["Uninfected", "Parasitized"]  # ubah urutannya sesuai class_indices saat training
+                        labels = ["Uninfected", "Parasitized"]
                         predicted_label = labels[class_index]
 
-                        # Tampilkan hasil prediksi
                         st.write(f"🎯 *Hasil Prediksi:* {predicted_label}")
                         st.progress(float(confidence))
 
-                        # Pesan berdasarkan tingkat keyakinan
                         if confidence > 0.85:
                             st.success("🌈 Model sangat yakin dengan hasil prediksi ini!")
                         elif confidence > 0.6:
@@ -152,7 +174,7 @@ if menu in ["Deteksi Objek (YOLO)", "Klasifikasi Gambar"]:
 if menu == "Grafik Akurasi Model":
     st.subheader("📊 Grafik Akurasi Model")
     model_names = ["Model A", "Model B", "Model C"]
-    accuracy = [0.91, 0.88, 0.93]  # contoh data akurasi
+    accuracy = [0.91, 0.88, 0.93]
 
     fig, ax = plt.subplots()
     ax.bar(model_names, accuracy, color=["#ff85a2", "#ffa6c9", "#ffb6d9"])
@@ -166,4 +188,4 @@ if menu == "Grafik Akurasi Model":
 # FOOTER
 # ==========================
 st.markdown("---")
-st.markdown("<center>Made with 💕 by Emmy Nora 🌸</center>", unsafe_allow_html=True)
+st.markdown("<center>Made with 💕 by Mulya Syira 🌸</center>", unsafe_allow_html=True)
