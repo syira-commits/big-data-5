@@ -4,175 +4,166 @@ import tensorflow as tf
 from tensorflow.keras.preprocessing import image
 import numpy as np
 from PIL import Image
-import cv2
-import io
+import time
+import matplotlib.pyplot as plt
+import plotly.express as px
 
 # ==========================
-# Load Models
+# KONFIGURASI HALAMAN
+# ==========================
+st.set_page_config(
+    page_title="💖 PinkVision: Smart & Cute AI 💖",
+    page_icon="🌸",
+    layout="centered",
+    initial_sidebar_state="expanded"
+)
+
+# ==========================
+# CUSTOM CSS (TEMA PINK)
+# ==========================
+st.markdown("""
+    <style>
+    .stApp {
+        background-color: #ffe4e9;
+        color: #5c005c;
+        font-family: "Poppins", sans-serif;
+    }
+    .stButton>button {
+        background-color: #ff85a2;
+        color: white;
+        border-radius: 12px;
+        padding: 8px 20px;
+        font-weight: bold;
+    }
+    .stButton>button:hover {
+        background-color: #ff4d79;
+    }
+    .stSidebar {
+        background-color: #fff0f5;
+    }
+    </style>
+""", unsafe_allow_html=True)
+
+# ==========================
+# LOAD MODEL
 # ==========================
 @st.cache_resource
 def load_models():
-    yolo_model = YOLO("model/Mulya Syira_Laporan 4.pt")  # Model deteksi objek
-    classifier = tf.keras.models.load_model("model/Mulya Syira_Laporan2.h5")  # Model klasifikasi
+    yolo_model = YOLO("model/Mulya Syira_Laporan 4.pt")  # model deteksi objek
+    classifier = tf.keras.models.load_model("model/Mulya Syira_Laporan2.h5")  # model klasifikasi utama
     return yolo_model, classifier
 
-yolo_model, classifier = load_models()
+with st.spinner("💫 Sedang memuat model kamu... tunggu bentar ya 💕"):
+    yolo_model, classifier = load_models()
+st.success("Model berhasil dimuat! 🌸")
 
 # ==========================
-# Tampilan Dashboard
+# HEADER
 # ==========================
-st.set_page_config(page_title="CuteVision App", page_icon="🐱", layout="centered")
-
-st.title("🐾 CuteVision App — Deteksi & Klasifikasi Gambar Lucu")
+st.title("🌷 PinkVision: Cute Image & Object Detector 🌷")
 st.markdown(
-    "Aplikasi ini menggunakan **YOLO** untuk mendeteksi objek dan **CNN (TensorFlow)** untuk mengklasifikasi gambar. "
-    "Cocok untuk yang suka hal-hal lucu tapi tetap cerdas! 🧠✨"
+    "Selamat datang di *PinkVision*! 💖<br>"
+    "Aplikasi ini bisa melakukan deteksi objek (YOLO), klasifikasi gambar, "
+    "perbandingan dua model, dan menampilkan grafik akurasi dengan gaya imut tapi cerdas 🧠✨",
+    unsafe_allow_html=True
 )
 
-menu = st.sidebar.radio("🌈 Pilih Mode:", ["🎯 Deteksi Objek (YOLO)", "🧩 Klasifikasi Gambar"])
+# ==========================
+# SIDEBAR
+# ==========================
+st.sidebar.header("🎀 Pilihan Mode")
+menu = st.sidebar.selectbox(
+    "Pilih Mode:",
+    [
+        "Deteksi Objek (YOLO)",
+        "Klasifikasi Gambar",
+        "Perbandingan Dua Model",
+        "Grafik Akurasi Model"
+    ]
+)
 st.sidebar.markdown("---")
-st.sidebar.info("Unggah gambar dan lihat keajaiban AI bekerja!")
-
-uploaded_file = st.file_uploader("📤 Unggah Gambar di Sini", type=["jpg", "jpeg", "png"])
+st.sidebar.info("Unggah gambar di bawah, lalu klik tombol Mulai Prediksi! 🌸")
 
 # ==========================
-# Proses Gambar
+# MODE: DETEKSI & KLASIFIKASI
 # ==========================
-if uploaded_file is not None:
-    img = Image.open(uploaded_file)
-    st.image(img, caption="✨ Gambar yang Diupload ✨", use_container_width=True)
+if menu in ["Deteksi Objek (YOLO)", "Klasifikasi Gambar"]:
+    uploaded_files = st.file_uploader(
+        "📸 Unggah satu atau beberapa gambar kamu di sini:",
+        type=["jpg", "jpeg", "png"],
+        accept_multiple_files=True
+    )
 
-    # ==========================
-    # MODE DETEKSI OBJEK (FINAL)
-    # ==========================
-    if menu == "🎯 Deteksi Objek (YOLO)":
-        with st.spinner("🐱 Sedang mendeteksi objek... tunggu sebentar ya!"):
-            # Konversi ke OpenCV
-            img_cv = np.array(img.convert("RGB"))
-            gray = cv2.cvtColor(img_cv, cv2.COLOR_RGB2GRAY)
-            edges = cv2.Canny(gray, 100, 200)
-            edge_density = np.sum(edges > 0) / (gray.shape[0] * gray.shape[1])
+    if uploaded_files:
+        for uploaded_file in uploaded_files:
+            img = Image.open(uploaded_file)
+            st.image(img, caption=f"✨ Gambar: {uploaded_file.name}", use_container_width=True)
 
-            # Jika gambar terlalu banyak garis (biasanya teks/grafik)
-            if edge_density > 0.12:
-                st.warning("📄 Gambar terdeteksi sebagai teks/grafik — tidak ada objek yang relevan 💤")
-            else:
-                # Jalankan YOLO dengan threshold ketat
-                results = yolo_model.predict(
-                    img,
-                    conf=0.7,    # confidence minimal
-                    iou=0.4,     # hindari duplikasi box
-                    verbose=False
-                )
+            if st.button(f"🌷 Mulai Prediksi: {uploaded_file.name}"):
+                with st.spinner("🪄 Sedang memproses..."):
+                    time.sleep(1.2)
 
-                boxes = results[0].boxes
-                data = boxes.data.cpu().numpy() if boxes is not None else np.array([])
-                names = results[0].names
+                    # ==========================
+                    # MODE DETEKSI OBJEK
+                    # ==========================
+                    if menu == "Deteksi Objek (YOLO)":
+                        results = yolo_model(img)
+                        result_img = results[0].plot()
+                        st.image(result_img, caption="🎀 Hasil Deteksi Objek 🎀", use_container_width=True)
+                        st.success("✨ Deteksi selesai dengan sukses! ✨")
+                        st.markdown("💡 *Saran:* Jika hasil kurang akurat, coba gambar dengan pencahayaan lebih terang 🌞")
 
-                # Label yang diizinkan
-                allowed_labels = ["cocopham", "sprite"]
-                filtered = []
+                    # ==========================
+                    # MODE KLASIFIKASI GAMBAR
+                    # ==========================
+                    elif menu == "Klasifikasi Gambar":
+                        # Ubah ukuran gambar ke 128x128 (sesuai model kamu)
+                        img_resized = img.resize((128, 128))
+                        img_array = image.img_to_array(img_resized)
+                        img_array = np.expand_dims(img_array, axis=0) / 255.0
 
-                if len(data) > 0:
-                    for box in data:
-                        x1, y1, x2, y2, conf, cls_id = box
-                        label = names.get(int(cls_id), "Unknown")
-                        area = (x2 - x1) * (y2 - y1)
-                        img_area = gray.shape[0] * gray.shape[1]
+                        # Prediksi
+                        prediction = classifier.predict(img_array)
+                        class_index = np.argmax(prediction)
+                        confidence = np.max(prediction)
 
-                        # Filter hasil agar hanya yang valid
-                        if (
-                            label in allowed_labels
-                            and conf > 0.7
-                            and 0.02 < area / img_area < 0.6
-                        ):
-                            filtered.append((label, float(conf), (x1, y1, x2, y2)))
+                        # 🔸 Mapping label sesuai urutan waktu training
+                        labels = ["Indoor", "Outdoor"]  # ubah urutannya sesuai class_indices saat training
+                        predicted_label = labels[class_index]
 
-                # ==========================
-                # POST-FILTER (anti false positive)
-                # ==========================
-                if len(filtered) > 5:
-                    avg_conf = np.mean([f[1] for f in filtered])
-                    if avg_conf < 0.95:
-                        filtered = []
+                        # Tampilkan hasil prediksi
+                        st.write(f"🎯 *Hasil Prediksi:* {predicted_label}")
+                        st.progress(float(confidence))
 
-                if len(filtered) > 0:
-                    labels = [f[0] for f in filtered]
-                    if all(lbl == "cocopham" for lbl in labels):
-                        x_positions = [f[2][0] for f in filtered]
-                        spread = max(x_positions) - min(x_positions)
-                        if spread > 0.6 * gray.shape[1]:
-                            filtered = []
+                        # Pesan berdasarkan tingkat keyakinan
+                        if confidence > 0.85:
+                            st.success("🌈 Model sangat yakin dengan hasil prediksi ini!")
+                        elif confidence > 0.6:
+                            st.warning("🌤 Model agak ragu, tapi masih cukup yakin.")
+                        else:
+                            st.error("😅 Model kurang yakin. Coba gambar lain yang lebih jelas ya!")
 
-                # ==========================
-                # TAMPILKAN HASIL
-                # ==========================
-                if len(filtered) == 0:
-                    st.warning("😿 Tidak ada objek relevan terdeteksi (Cocopham & Sprite saja).")
-                else:
-                    annotated_img = np.array(img.convert("RGB"))
-                    for label, conf, (x1, y1, x2, y2) in filtered:
-                        color = (0, 255, 0) if label == "cocopham" else (255, 0, 0)
-                        cv2.rectangle(annotated_img, (int(x1), int(y1)), (int(x2), int(y2)), color, 3)
-                        cv2.putText(
-                            annotated_img,
-                            f"{label} {conf:.2f}",
-                            (int(x1), int(y1) - 10),
-                            cv2.FONT_HERSHEY_SIMPLEX,
-                            0.8,
-                            color,
-                            2,
-                        )
+                        st.markdown("💡 *Saran:* Gunakan gambar jelas, tidak blur, agar hasil klasifikasi lebih akurat 📷")
 
-                    st.image(annotated_img, caption="🎉 Hasil Deteksi (Sudah Terfilter)!", use_container_width=True)
-
-                    # Tombol download hasil
-                    img_bytes = cv2.imencode(".jpg", cv2.cvtColor(annotated_img, cv2.COLOR_RGB2BGR))[1].tobytes()
-                    st.download_button(
-                        label="💾 Unduh Hasil Deteksi",
-                        data=io.BytesIO(img_bytes),
-                        file_name="hasil_deteksi.jpg",
-                        mime="image/jpeg"
-                    )
-
-                    st.subheader("📋 Detail Deteksi")
-                    st.dataframe({
-                        "Class": [f[0] for f in filtered],
-                        "Confidence": [round(f[1], 2) for f in filtered],
-                    })
-
-    # ==========================
-    # MODE KLASIFIKASI GAMBAR
-    # ==========================
-    elif menu == "🧩 Klasifikasi Gambar":
-        with st.spinner("🐶 Sedang memprediksi jenis gambar..."):
-            img_resized = img.resize((128, 128))
-            img_array = image.img_to_array(img_resized)
-            img_array = np.expand_dims(img_array, axis=0)
-            img_array = img_array / 255.0
-
-            prediction = classifier.predict(img_array)
-
-            # Tentukan hasil
-            if prediction.shape[-1] == 1:
-                prob = prediction[0][0]
-                label = "Uninfected" if prob > 0.5 else "Parasitized"
-                confidence = prob if prob > 0.5 else 1 - prob
-            else:
-                class_names = ["Parasitized", "Uninfected"]
-                class_index = np.argmax(prediction)
-                label = class_names[class_index]
-                confidence = np.max(prediction)
-
-            st.success("🎊 Prediksi Berhasil!")
-            st.write("**Hasil Prediksi:**", label)
-            st.write("**Probabilitas:**", f"{confidence:.2f}")
-
-else:
-    st.info("💡 Silakan unggah gambar terlebih dahulu untuk mulai.")
 
 # ==========================
-# Footer lucu
+# MODE: GRAFIK AKURASI
+# ==========================
+if menu == "Grafik Akurasi Model":
+    st.subheader("📊 Grafik Akurasi Model")
+    model_names = ["Model A", "Model B", "Model C"]
+    accuracy = [0.91, 0.88, 0.93]  # contoh data akurasi
+
+    fig, ax = plt.subplots()
+    ax.bar(model_names, accuracy, color=["#ff85a2", "#ffa6c9", "#ffb6d9"])
+    ax.set_ylim(0, 1)
+    ax.set_ylabel("Akurasi")
+    ax.set_title("💖 Perbandingan Akurasi Model Klasifikasi 💖")
+
+    st.pyplot(fig)
+
+# ==========================
+# FOOTER
 # ==========================
 st.markdown("---")
-st.caption("🐾 Dibuat oleh Mulya Syira — Dashboard lucu tapi cerdas menggunakan Streamlit, YOLO & TensorFlow.")
+st.markdown("<center>Made with 💕 by Emmy Nora 🌸</center>", unsafe_allow_html=True)
