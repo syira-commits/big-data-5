@@ -1,3 +1,11 @@
+import os
+os.environ["QT_QPA_PLATFORM"] = "offscreen"
+os.environ["MPLCONFIGDIR"] = "/tmp/matplotlib"
+os.environ["OPENCV_VIDEOIO_PRIORITY_MSMF"] = "0"
+os.environ["OPENCV_VIDEOIO_PRIORITY_GSTREAMER"] = "0"
+os.environ["OPENCV_VIDEOIO_PRIORITY_FFMPEG"] = "0"
+import matplotlib
+matplotlib.use('Agg')
 import streamlit as st
 from ultralytics import YOLO
 import tensorflow as tf
