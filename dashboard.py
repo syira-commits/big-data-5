@@ -1,4 +1,3 @@
-import os
 import streamlit as st
 from ultralytics import YOLO
 import tensorflow as tf
@@ -7,7 +6,6 @@ import numpy as np
 from PIL import Image
 import cv2
 
-os.system("apt-get update -y && apt-get install -y libgl1 libglib2.0-0")
 # ==========================
 # Load Models
 # ==========================
