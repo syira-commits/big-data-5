@@ -22,17 +22,30 @@ yolo_model, classifier = load_models()
 # ==========================
 st.set_page_config(page_title="Deteksi Objek dan Klasifikasi Gambar", page_icon="🐱", layout="centered")
 
-# Warna background ungu pastel
+# Warna background pastel cerah
 st.markdown(
     """
     <style>
-        body {
-            background-color: #E6E0F8; /* Ungu pastel */
+        /* Background seluruh halaman */
+        .css-18e3th9, .css-1d391kg {
+            background-color: #E6E0F8;  /* Ungu pastel cerah */
         }
+
+        /* Tombol Streamlit */
         .stButton>button {
             background-color: #DCCFFF; /* Button ungu pastel */
+            color: black;
         }
-        .css-1d391kg {padding-top: 2rem;} /* Tambah jarak atas */
+
+        /* Sidebar */
+        .css-1d391kg [data-testid="stSidebar"] {
+            background-color: #F3E8FF; /* Sidebar ungu pastel lebih terang */
+        }
+
+        /* Tambah jarak atas agar rapi */
+        .css-1d391kg {
+            padding-top: 2rem;
+        }
     </style>
     """,
     unsafe_allow_html=True
@@ -51,8 +64,7 @@ st.sidebar.markdown("---")
 if menu == "🧩 Klasifikasi Gambar":
     img_size = st.sidebar.slider("🖼️ Ukuran Gambar untuk Klasifikasi", 64, 256, 128, 16)
 
-# Pilihan tema (saat ini hanya visual)
-theme = st.sidebar.selectbox("🎨 Warna Background", ["Ungu Pastel"])
+# Tips penggunaan
 st.sidebar.info("💡 Tips:\n- Deteksi: gunakan gambar Cocopham & Sprite\n- Klasifikasi: gunakan gambar sel Uninfected & Parasitized")
 
 # Riwayat upload
