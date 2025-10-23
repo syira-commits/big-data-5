@@ -18,41 +18,50 @@ def load_models():
 yolo_model, classifier = load_models()
 
 # ==========================
-# Tampilan Dashboard
+# Page Config
 # ==========================
-st.set_page_config(page_title="Deteksi Objek dan Klasifikasi Gambar", page_icon="🐱", layout="centered")
+st.set_page_config(
+    page_title="Deteksi Objek dan Klasifikasi Gambar",
+    page_icon="🥤🧫",
+    layout="centered"
+)
 
-# Warna background pastel cerah
+# ==========================
+# Custom CSS untuk background & file uploader
+# ==========================
 st.markdown(
     """
     <style>
-        /* Background seluruh halaman */
-        .css-18e3th9, .css-1d391kg {
-            background-color: #E6E0F8;  /* Ungu pastel cerah */
-        }
+    /* Background utama */
+    .main > div {
+        background-color:#E6E0F8; 
+        padding:2rem; 
+        border-radius:0px;
+    }
 
-        /* Tombol Streamlit */
-        .stButton>button {
-            background-color: #DCCFFF; /* Button ungu pastel */
-            color: black;
-        }
-
-        /* Sidebar */
-        .css-1d391kg [data-testid="stSidebar"] {
-            background-color: #F3E8FF; /* Sidebar ungu pastel lebih terang */
-        }
-
-        /* Tambah jarak atas agar rapi */
-        .css-1d391kg {
-            padding-top: 2rem;
-        }
+    /* File uploader custom */
+    .css-1r6slb0 input[type="file"] {
+        background-color: #F3E8FF;
+        border: 2px dashed #DCCFFF;
+        border-radius: 10px;
+        padding: 20px;
+        cursor: pointer;
+        width: 100%;
+        box-shadow: 2px 2px 10px rgba(0,0,0,0.1);
+    }
+    .css-1r6slb0 input[type="file"]::file-selector-button {
+        background-color: #DCCFFF;
+        color: black;
+        border: none;
+        padding: 10px 20px;
+        margin-right: 10px;
+        border-radius: 5px;
+        cursor: pointer;
+    }
     </style>
     """,
     unsafe_allow_html=True
 )
-
-st.title("🐾 Deteksi Objek dan Klasifikasi Gambar")
-st.markdown("Aplikasi ini menggunakan YOLO untuk deteksi objek dan CNN (TensorFlow) untuk klasifikasi gambar.")
 
 # ==========================
 # Sidebar Interaktif
@@ -60,23 +69,29 @@ st.markdown("Aplikasi ini menggunakan YOLO untuk deteksi objek dan CNN (TensorFl
 menu = st.sidebar.radio("🌈 Pilih Mode:", ["🎯 Deteksi Objek (YOLO)", "🧩 Klasifikasi Gambar"])
 st.sidebar.markdown("---")
 
-# Slider ukuran gambar untuk klasifikasi
 if menu == "🧩 Klasifikasi Gambar":
     img_size = st.sidebar.slider("🖼️ Ukuran Gambar untuk Klasifikasi", 64, 256, 128, 16)
 
-# Tips penggunaan
 st.sidebar.info("💡 Tips:\n- Deteksi: gunakan gambar Cocopham & Sprite\n- Klasifikasi: gunakan gambar sel Uninfected & Parasitized")
 
-# Riwayat upload
 if "history" not in st.session_state:
     st.session_state.history = []
 
 st.sidebar.subheader("📂 Riwayat Upload")
 if st.session_state.history:
-    for img_name in st.session_state.history[-5:]:  # 5 terakhir
+    for img_name in st.session_state.history[-5:]:
         st.sidebar.write(img_name)
 
-uploaded_file = st.file_uploader("📤 Unggah Gambar di Sini", type=["jpg", "jpeg", "png"])
+# ==========================
+# Judul & deskripsi
+# ==========================
+st.title("🐾 Deteksi Objek dan Klasifikasi Gambar")
+st.markdown("Aplikasi ini menggunakan YOLO untuk deteksi objek (minuman) dan CNN (TensorFlow) untuk klasifikasi sel.")
+
+# ==========================
+# Upload gambar
+# ==========================
+uploaded_file = st.file_uploader("📤 Unggah atau drag gambar minuman / sel di sini", type=["jpg", "jpeg", "png"])
 
 # ==========================
 # Proses Gambar
@@ -84,12 +99,10 @@ uploaded_file = st.file_uploader("📤 Unggah Gambar di Sini", type=["jpg", "jpe
 if uploaded_file is not None:
     img = Image.open(uploaded_file)
     st.image(img, caption="✨ Gambar yang Diupload ✨", use_container_width=True)
-
-    # Simpan ke history
     st.session_state.history.append(uploaded_file.name)
 
     # --------------------------
-    # MODE DETEKSI OBJEK
+    # Deteksi Objek
     # --------------------------
     if menu == "🎯 Deteksi Objek (YOLO)":
         st.info("ℹ️ Gunakan gambar Cocopham & Sprite agar hasil lebih akurat!")
@@ -117,11 +130,7 @@ if uploaded_file is not None:
                         area = (x2 - x1) * (y2 - y1)
                         img_area = gray.shape[0] * gray.shape[1]
 
-                        if (
-                            label in allowed_labels
-                            and conf > 0.6
-                            and 0.02 < area / img_area < 0.8
-                        ):
+                        if label in allowed_labels and conf > 0.6 and 0.02 < area/img_area < 0.8:
                             filtered.append((label, float(conf), (x1, y1, x2, y2)))
 
                 if len(filtered) == 0:
@@ -134,11 +143,10 @@ if uploaded_file is not None:
                         "Class": [f[0] for f in filtered],
                         "Confidence": [round(f[1],2) for f in filtered],
                     })
-                    # Efek balon
                     st.balloons()
 
     # --------------------------
-    # MODE KLASIFIKASI GAMBAR
+    # Klasifikasi Gambar
     # --------------------------
     elif menu == "🧩 Klasifikasi Gambar":
         st.info("ℹ️ Gunakan gambar sel: Uninfected & Parasitized agar hasil lebih akurat!")
@@ -163,8 +171,6 @@ if uploaded_file is not None:
             st.success("🎊 Prediksi Berhasil!")
             st.write("Hasil Prediksi:", label)
             st.write("Probabilitas:", f"{confidence:.2f}")
-
-            # Efek salju
             st.snow()
 
 else:
