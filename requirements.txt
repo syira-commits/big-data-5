@@ -3,6 +3,5 @@ tensorflow
 ultralytics
 pillow
 opencv-python-headless
-matplotlib
-plotly
-opencv-python
+numpy
+pandas
