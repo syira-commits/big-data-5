@@ -1,171 +1,189 @@
 import streamlit as st
 from ultralytics import YOLO
 import tensorflow as tf
-from PIL import Image
+from tensorflow.keras.preprocessing import image
 import numpy as np
+from PIL import Image
+import cv2
 
-# ========================== CONFIG ==========================
-st.set_page_config(
-    page_title="Deteksi Objek dan Klasifikasi Gambar",
-    page_icon="🩺",
-    layout="wide"
-)
+# ==========================
+# Load Models
+# ==========================
+@st.cache_resource
+def load_models():
+    yolo_model = YOLO("model/Mulya Syira_Laporan 4.pt")  # Model deteksi objek
+    classifier = tf.keras.models.load_model("model/Mulya Syira_Laporan2.h5")  # Model klasifikasi
+    return yolo_model, classifier
 
-# ========================== CUSTOM STYLE ==========================
+yolo_model, classifier = load_models()
+
+# ==========================
+# Konfigurasi Halaman
+# ==========================
+st.set_page_config(page_title="Deteksi Objek dan Klasifikasi Gambar", page_icon="📸", layout="wide")
+
+# ==========================
+# Gaya dan Warna Halaman
+# ==========================
 st.markdown("""
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=Quicksand:wght@500&display=swap');
+<style>
+[data-testid="stAppViewContainer"] {
+    background: linear-gradient(135deg, #fff5e4 0%, #ffe3e3 50%, #e3f2ff 100%);
+    background-attachment: fixed;
+    color: #2e2e2e;
+    font-family: 'Quicksand', sans-serif;
+}
 
-        html, body, [class*="css"] {
-            font-family: 'Quicksand', sans-serif;
-            background: linear-gradient(135deg, #f9ede3 0%, #f6e9ff 50%, #e6f7f5 100%);
-            color: #2e2a26;
-        }
+[data-testid="stHeader"] {
+    background: rgba(0,0,0,0);
+}
 
-        section[data-testid="stSidebar"] {
-            background-color: #fdf8f4;
-            border-right: 2px solid #f0e1d6;
-        }
+.main-title {
+    text-align: center;
+    font-size: 40px;
+    color: #3e2723;
+    font-weight: bold;
+    margin-top: 25px;
+    text-shadow: 2px 2px 6px rgba(0,0,0,0.2);
+}
 
-        .sidebar-title {
-            font-size: 22px;
-            font-weight: bold;
-            color: #4a3426;
-            margin-bottom: 15px;
-        }
+.sub-text {
+    text-align: center;
+    color: #4b3832;
+    font-size: 18px;
+    margin-bottom: 40px;
+}
 
-        .sidebar-item {
-            font-size: 16px;
-            padding: 8px 0;
-            color: #4a3426;
-        }
+.option-card {
+    background: rgba(255,255,255,0.9);
+    padding: 25px;
+    border-radius: 20px;
+    text-align: center;
+    box-shadow: 0 6px 18px rgba(0,0,0,0.2);
+    transition: 0.3s ease;
+}
+.option-card:hover {
+    transform: scale(1.05);
+    box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+}
 
-        .sidebar-item:hover {
-            color: #8b6333;
-        }
-
-        .main-header {
-            font-size: 36px;
-            font-weight: bold;
-            color: #2f2a27;
-            margin-bottom: -5px;
-        }
-
-        .sub-header {
-            color: #6d635a;
-            font-size: 16px;
-            margin-bottom: 40px;
-        }
-
-        .card {
-            background-color: #fff8f3;
-            border-radius: 14px;
-            padding: 25px;
-            box-shadow: 0 3px 10px rgba(0,0,0,0.05);
-            margin-bottom: 25px;
-            text-align: center;
-        }
-
-        .card h3 {
-            color: #4b3f3a;
-            margin-bottom: 10px;
-        }
-
-        .stButton>button {
-            background-color: #d3b4f0;
-            color: #2f2a27;
-            border-radius: 10px;
-            padding: 10px 20px;
-            border: none;
-            font-weight: bold;
-            transition: 0.3s;
-        }
-
-        .stButton>button:hover {
-            background-color: #c59ef0;
-            transform: scale(1.05);
-        }
-
-        .info-card {
-            background-color: #fff7f0;
-            border-radius: 14px;
-            padding: 18px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
-            margin-bottom: 20px;
-        }
-
-        hr {
-            border: none;
-            height: 2px;
-            background: #f0e1d6;
-            margin: 40px 0;
-        }
-    </style>
+.stButton>button {
+    background-color: #a47c48;
+    color: white;
+    font-weight: bold;
+    border-radius: 10px;
+    border: none;
+    padding: 10px 20px;
+    transition: 0.3s ease;
+}
+.stButton>button:hover {
+    background-color: #8b6333;
+    transform: scale(1.05);
+}
+</style>
 """, unsafe_allow_html=True)
 
-# ========================== SIDEBAR ==========================
-with st.sidebar:
-    st.markdown('<div class="sidebar-title">🩺 Dashboard</div>', unsafe_allow_html=True)
-    menu = st.radio("Navigasi:", ["🏠 Dashboard", "🔍 Deteksi Objek", "🧠 Klasifikasi Gambar", "ℹ️ Tentang"], label_visibility="collapsed")
-    st.markdown("<hr>", unsafe_allow_html=True)
-    st.caption("AI Vision System © 2025")
+# ==========================
+# Judul dan Deskripsi
+# ==========================
+st.markdown('<p class="main-title">📸 Deteksi Objek dan Klasifikasi Gambar</p>', unsafe_allow_html=True)
+st.markdown('<p class="sub-text">Gunakan teknologi AI untuk mendeteksi objek menggunakan YOLO dan mengklasifikasikan gambar menggunakan CNN (TensorFlow).</p>', unsafe_allow_html=True)
 
-# ========================== DASHBOARD ==========================
-if menu == "🏠 Dashboard":
-    st.markdown('<div class="main-header">Deteksi Objek dan Klasifikasi Gambar</div>', unsafe_allow_html=True)
-    st.markdown('<div class="sub-header">Pilih fitur yang ingin digunakan dan jelajahi kemampuan model AI</div>', unsafe_allow_html=True)
+# ==========================
+# Pilihan Mode
+# ==========================
+col1, col2 = st.columns(2)
 
-    col1, col2 = st.columns(2)
+with col1:
+    st.markdown("<div class='option-card'>", unsafe_allow_html=True)
+    st.subheader("🎯 Deteksi Objek (YOLO)")
+    st.write("Gunakan model YOLO untuk mendeteksi objek seperti **Cocopham** dan **Sprite** dalam gambar.")
+    deteksi_btn = st.button("Gunakan Mode Ini", key="deteksi")
+    st.markdown("</div>", unsafe_allow_html=True)
 
-    with col1:
-        st.markdown('<div class="card">', unsafe_allow_html=True)
-        st.markdown("<h3>🔍 Deteksi Objek</h3>", unsafe_allow_html=True)
-        st.write("Gunakan model YOLOv8 untuk mendeteksi berbagai objek dari gambar.")
-        if st.button("Aktifkan Deteksi Objek"):
-            st.session_state["menu"] = "🔍 Deteksi Objek"
-            st.experimental_rerun()
-        st.markdown("</div>", unsafe_allow_html=True)
+with col2:
+    st.markdown("<div class='option-card'>", unsafe_allow_html=True)
+    st.subheader("🧩 Klasifikasi Gambar (CNN)")
+    st.write("Gunakan model CNN untuk mengenali gambar **Parasitized** atau **Uninfected**.")
+    klasifikasi_btn = st.button("Gunakan Mode Ini", key="klasifikasi")
+    st.markdown("</div>", unsafe_allow_html=True)
 
-    with col2:
-        st.markdown('<div class="card">', unsafe_allow_html=True)
-        st.markdown("<h3>🧠 Klasifikasi Gambar</h3>", unsafe_allow_html=True)
-        st.write("Gunakan model Keras untuk mengklasifikasikan gambar sel sebagai Parasitized atau Uninfected.")
-        if st.button("Aktifkan Klasifikasi Gambar"):
-            st.session_state["menu"] = "🧠 Klasifikasi Gambar"
-            st.experimental_rerun()
-        st.markdown("</div>", unsafe_allow_html=True)
+# ==========================
+# Tampilkan Input Berdasarkan Pilihan
+# ==========================
+if deteksi_btn:
+    st.markdown("### 🔍 Mode Deteksi Objek")
+    uploaded_file = st.file_uploader("Unggah Gambar untuk Deteksi", type=["jpg", "jpeg", "png"])
+    if uploaded_file:
+        img = Image.open(uploaded_file)
+        st.image(img, caption="Gambar yang Diupload", use_container_width=True)
+        with st.spinner("Mendeteksi objek..."):
+            img_cv = np.array(img.convert("RGB"))
+            gray = cv2.cvtColor(img_cv, cv2.COLOR_RGB2GRAY)
+            edges = cv2.Canny(gray, 100, 200)
+            edge_density = np.sum(edges > 0) / (gray.shape[0] * gray.shape[1])
 
-    st.markdown("<hr>", unsafe_allow_html=True)
+            if edge_density > 0.12:
+                st.warning("📄 Gambar terdeteksi sebagai teks/grafik — tidak ada objek relevan.")
+            else:
+                results = yolo_model(img)
+                boxes = results[0].boxes
+                data = boxes.data.cpu().numpy() if boxes is not None else np.array([])
+                names = results[0].names
 
-    col3, col4 = st.columns(2)
-    with col3:
-        st.markdown('<div class="info-card"><b>📅 Tanggal:</b> 23 Oktober 2025<br><b>Status:</b> Siap digunakan</div>', unsafe_allow_html=True)
-    with col4:
-        st.markdown('<div class="info-card"><b>🧾 Catatan:</b> Pilih mode untuk memulai deteksi atau klasifikasi gambar.</div>', unsafe_allow_html=True)
+                allowed_labels = ["cocopham", "sprite"]
+                filtered = []
 
-# ========================== MODE DETEKSI ==========================
-elif menu == "🔍 Deteksi Objek":
-    st.title("🔍 Mode Deteksi Objek")
-    st.info("Fitur deteksi objek belum diaktifkan. Aktifkan model untuk melanjutkan pengujian.")
-    st.button("Kembali ke Dashboard", on_click=lambda: st.experimental_set_query_params(menu="🏠 Dashboard"))
+                if len(data) > 0:
+                    for box in data:
+                        x1, y1, x2, y2, conf, cls_id = box
+                        label = names.get(int(cls_id), "Unknown")
+                        area = (x2 - x1) * (y2 - y1)
+                        img_area = gray.shape[0] * gray.shape[1]
+                        if label in allowed_labels and conf > 0.6 and 0.02 < area / img_area < 0.8:
+                            filtered.append((label, float(conf)))
 
-# ========================== MODE KLASIFIKASI ==========================
-elif menu == "🧠 Klasifikasi Gambar":
-    st.title("🧠 Mode Klasifikasi Gambar")
-    st.info("Fitur klasifikasi belum diaktifkan. Aktifkan model untuk memulai klasifikasi.")
-    st.button("Kembali ke Dashboard", on_click=lambda: st.experimental_set_query_params(menu="🏠 Dashboard"))
+                if len(filtered) == 0:
+                    st.warning("😿 Tidak ada objek terdeteksi (hanya mendeteksi Cocopham & Sprite).")
+                else:
+                    annotated_img = results[0].plot()
+                    st.image(annotated_img, caption="🎉 Hasil Deteksi!", use_container_width=True)
+                    st.subheader("📋 Detail Deteksi")
+                    st.dataframe({
+                        "Class": [f[0] for f in filtered],
+                        "Confidence": [round(f[1], 2) for f in filtered],
+                    })
 
-# ========================== TENTANG ==========================
-elif menu == "ℹ️ Tentang":
-    st.title("ℹ️ Tentang Aplikasi")
-    st.markdown("""
-    Aplikasi ini dirancang untuk mendemonstrasikan dua fungsi utama:
-    - **Deteksi Objek:** Menggunakan model YOLOv8 untuk mengenali objek.
-    - **Klasifikasi Gambar:** Menggunakan model Keras untuk membedakan sel Parasitized dan Uninfected.
+if klasifikasi_btn:
+    st.markdown("### 🧠 Mode Klasifikasi Gambar")
+    uploaded_file = st.file_uploader("Unggah Gambar untuk Klasifikasi", type=["jpg", "jpeg", "png"])
+    if uploaded_file:
+        img = Image.open(uploaded_file)
+        st.image(img, caption="Gambar yang Diupload", use_container_width=True)
+        with st.spinner("Sedang memprediksi jenis gambar..."):
+            img_resized = img.resize((128, 128))
+            img_array = image.img_to_array(img_resized)
+            img_array = np.expand_dims(img_array, axis=0)
+            img_array = img_array / 255.0
 
-    Dibangun dengan:
-    - Streamlit  
-    - TensorFlow / Keras  
-    - Ultralytics YOLO  
-    """)
-    st.markdown('<div class="info-card">Versi Aplikasi: v1.0 — Dirancang untuk eksplorasi dan pembelajaran AI</div>', unsafe_allow_html=True)
+            prediction = classifier.predict(img_array)
+
+            if prediction.shape[-1] == 1:
+                prob = prediction[0][0]
+                label = "Uninfected" if prob > 0.5 else "Parasitized"
+                confidence = prob if prob > 0.5 else 1 - prob
+            else:
+                class_names = ["Parasitized", "Uninfected"]
+                class_index = np.argmax(prediction)
+                label = class_names[class_index]
+                confidence = np.max(prediction)
+
+            st.success("🎊 Prediksi Berhasil!")
+            st.write("Hasil Prediksi:", label)
+            st.write("Probabilitas:", f"{confidence:.2f}")
+
+# ==========================
+# Footer
+# ==========================
+st.markdown("---")
+st.markdown("<p style='text-align:center; color:#3e2723;'>📸 Dibuat oleh <b>Mulya Syira</b> — Aplikasi Deteksi & Klasifikasi Gambar menggunakan Streamlit, YOLO, dan TensorFlow.</p>", unsafe_allow_html=True)
