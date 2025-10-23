@@ -132,15 +132,3 @@ elif menu == "🧠 Klasifikasi Gambar":
         st.write(f"Gambar terdeteksi sebagai: **Kelas {kelas}**")
     else:
         st.info("Silakan unggah gambar terlebih dahulu untuk mengklasifikasikan.")
-
----
-
-💡 **Kelebihan versi ini:**
-- Warna coklat pastel dengan gradasi yang hangat ☕  
-- Font *Quicksand* biar lebih halus dan modern  
-- Ada info box cantik untuk panduan gambar  
-- Tidak pakai fungsi `st.experimental_rerun()` (jadi nggak error lagi)
-
----
-
-Apakah kamu mau aku tambahkan **fitur kecil tambahan** (misalnya efek loading animasi saat prediksi berjalan atau menampilkan waktu proses deteksi)? Itu bisa bikin tampilannya lebih “hidup” ✨
