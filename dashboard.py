@@ -5,6 +5,7 @@ from tensorflow.keras.preprocessing import image
 import numpy as np
 from PIL import Image
 import cv2
+import io
 
 # ==========================
 # Load Models
@@ -23,7 +24,10 @@ yolo_model, classifier = load_models()
 st.set_page_config(page_title="CuteVision App", page_icon="🐱", layout="centered")
 
 st.title("🐾 CuteVision App — Deteksi & Klasifikasi Gambar Lucu")
-st.markdown("Aplikasi ini menggunakan YOLO untuk mendeteksi objek dan CNN (TensorFlow) untuk mengklasifikasi gambar. Cocok untuk yang suka hal-hal lucu tapi tetap cerdas!")
+st.markdown(
+    "Aplikasi ini menggunakan **YOLO** untuk mendeteksi objek dan **CNN (TensorFlow)** untuk mengklasifikasi gambar. "
+    "Cocok untuk yang suka hal-hal lucu tapi tetap cerdas! 🧠✨"
+)
 
 menu = st.sidebar.radio("🌈 Pilih Mode:", ["🎯 Deteksi Objek (YOLO)", "🧩 Klasifikasi Gambar"])
 st.sidebar.markdown("---")
@@ -39,7 +43,7 @@ if uploaded_file is not None:
     st.image(img, caption="✨ Gambar yang Diupload ✨", use_container_width=True)
 
     # ==========================
-    # MODE DETEKSI OBJEK
+    # MODE DETEKSI OBJEK (FINAL)
     # ==========================
     if menu == "🎯 Deteksi Objek (YOLO)":
         with st.spinner("🐱 Sedang mendeteksi objek... tunggu sebentar ya!"):
@@ -53,13 +57,19 @@ if uploaded_file is not None:
             if edge_density > 0.12:
                 st.warning("📄 Gambar terdeteksi sebagai teks/grafik — tidak ada objek yang relevan 💤")
             else:
-                # Jalankan YOLO
-                results = yolo_model(img)
+                # Jalankan YOLO dengan threshold ketat
+                results = yolo_model.predict(
+                    img,
+                    conf=0.7,    # confidence minimal
+                    iou=0.4,     # hindari duplikasi box
+                    verbose=False
+                )
+
                 boxes = results[0].boxes
                 data = boxes.data.cpu().numpy() if boxes is not None else np.array([])
                 names = results[0].names
 
-                # Hanya deteksi class tertentu
+                # Label yang diizinkan
                 allowed_labels = ["cocopham", "sprite"]
                 filtered = []
 
@@ -70,33 +80,60 @@ if uploaded_file is not None:
                         area = (x2 - x1) * (y2 - y1)
                         img_area = gray.shape[0] * gray.shape[1]
 
-                        # Filter ketat
+                        # Filter hasil agar hanya yang valid
                         if (
                             label in allowed_labels
-                            and conf > 0.6  # confidence minimal
-                            and 0.02 < area / img_area < 0.8  # ukuran area wajar
+                            and conf > 0.7
+                            and 0.02 < area / img_area < 0.6
                         ):
                             filtered.append((label, float(conf), (x1, y1, x2, y2)))
 
-                # --- Hasil Akhir ---
+                # ==========================
+                # POST-FILTER (anti false positive)
+                # ==========================
+                if len(filtered) > 5:
+                    avg_conf = np.mean([f[1] for f in filtered])
+                    if avg_conf < 0.95:
+                        filtered = []
+
+                if len(filtered) > 0:
+                    labels = [f[0] for f in filtered]
+                    if all(lbl == "cocopham" for lbl in labels):
+                        x_positions = [f[2][0] for f in filtered]
+                        spread = max(x_positions) - min(x_positions)
+                        if spread > 0.6 * gray.shape[1]:
+                            filtered = []
+
+                # ==========================
+                # TAMPILKAN HASIL
+                # ==========================
                 if len(filtered) == 0:
-                    st.warning("😿 Tidak ada objek terdeteksi (hanya mendeteksi Cocopham & Sprite)")
+                    st.warning("😿 Tidak ada objek relevan terdeteksi (Cocopham & Sprite saja).")
                 else:
-                    # Gambar ulang hanya hasil yang lolos filter
                     annotated_img = np.array(img.convert("RGB"))
                     for label, conf, (x1, y1, x2, y2) in filtered:
-                        cv2.rectangle(annotated_img, (int(x1), int(y1)), (int(x2), int(y2)), (0, 255, 0), 3)
+                        color = (0, 255, 0) if label == "cocopham" else (255, 0, 0)
+                        cv2.rectangle(annotated_img, (int(x1), int(y1)), (int(x2), int(y2)), color, 3)
                         cv2.putText(
                             annotated_img,
                             f"{label} {conf:.2f}",
                             (int(x1), int(y1) - 10),
                             cv2.FONT_HERSHEY_SIMPLEX,
                             0.8,
-                            (0, 255, 0),
+                            color,
                             2,
                         )
 
-                    st.image(annotated_img, caption="🎉 Hasil Deteksi (Terfilter)!", use_container_width=True)
+                    st.image(annotated_img, caption="🎉 Hasil Deteksi (Sudah Terfilter)!", use_container_width=True)
+
+                    # Tombol download hasil
+                    img_bytes = cv2.imencode(".jpg", cv2.cvtColor(annotated_img, cv2.COLOR_RGB2BGR))[1].tobytes()
+                    st.download_button(
+                        label="💾 Unduh Hasil Deteksi",
+                        data=io.BytesIO(img_bytes),
+                        file_name="hasil_deteksi.jpg",
+                        mime="image/jpeg"
+                    )
 
                     st.subheader("📋 Detail Deteksi")
                     st.dataframe({
@@ -128,11 +165,11 @@ if uploaded_file is not None:
                 confidence = np.max(prediction)
 
             st.success("🎊 Prediksi Berhasil!")
-            st.write("Hasil Prediksi:", label)
-            st.write("Probabilitas:", f"{confidence:.2f}")
+            st.write("**Hasil Prediksi:**", label)
+            st.write("**Probabilitas:**", f"{confidence:.2f}")
 
 else:
-    st.info("Silakan unggah gambar terlebih dahulu 💡")
+    st.info("💡 Silakan unggah gambar terlebih dahulu untuk mulai.")
 
 # ==========================
 # Footer lucu
