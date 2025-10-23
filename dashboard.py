@@ -111,7 +111,7 @@ if menu in ["Deteksi Objek (YOLO)", "Klasifikasi Gambar"]:
                 st.write(f"🧮 Edge Density: {edge_density:.6f}")
 
                 # Ambang batas empiris (bisa kamu ubah nanti)
-                EDGE_THRESHOLD = 0.002
+                EDGE_THRESHOLD = 0.0008
 
                 if edge_density < EDGE_THRESHOLD:
                     st.warning("🩺 Gambar terlalu homogen — kemungkinan gambar sel, bukan Cocopham/Sprite.")
