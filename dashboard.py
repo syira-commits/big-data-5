@@ -59,6 +59,7 @@ if uploaded_file is not None:
                 data = boxes.data.cpu().numpy() if boxes is not None else np.array([])
                 names = results[0].names
 
+                # Hanya deteksi class tertentu
                 allowed_labels = ["cocopham", "sprite"]
                 filtered = []
 
@@ -69,11 +70,11 @@ if uploaded_file is not None:
                         area = (x2 - x1) * (y2 - y1)
                         img_area = gray.shape[0] * gray.shape[1]
 
-                        # Validasi agar hanya hasil relevan yang diterima
+                        # Filter ketat
                         if (
                             label in allowed_labels
-                            and conf > 0.6  # Confidence ketat
-                            and 0.02 < area / img_area < 0.8  # Ukuran area wajar
+                            and conf > 0.6  # confidence minimal
+                            and 0.02 < area / img_area < 0.8  # ukuran area wajar
                         ):
                             filtered.append((label, float(conf), (x1, y1, x2, y2)))
 
@@ -81,8 +82,21 @@ if uploaded_file is not None:
                 if len(filtered) == 0:
                     st.warning("😿 Tidak ada objek terdeteksi (hanya mendeteksi Cocopham & Sprite)")
                 else:
-                    annotated_img = results[0].plot()
-                    st.image(annotated_img, caption="🎉 Hasil Deteksi!", use_container_width=True)
+                    # Gambar ulang hanya hasil yang lolos filter
+                    annotated_img = np.array(img.convert("RGB"))
+                    for label, conf, (x1, y1, x2, y2) in filtered:
+                        cv2.rectangle(annotated_img, (int(x1), int(y1)), (int(x2), int(y2)), (0, 255, 0), 3)
+                        cv2.putText(
+                            annotated_img,
+                            f"{label} {conf:.2f}",
+                            (int(x1), int(y1) - 10),
+                            cv2.FONT_HERSHEY_SIMPLEX,
+                            0.8,
+                            (0, 255, 0),
+                            2,
+                        )
+
+                    st.image(annotated_img, caption="🎉 Hasil Deteksi (Terfilter)!", use_container_width=True)
 
                     st.subheader("📋 Detail Deteksi")
                     st.dataframe({
@@ -124,4 +138,4 @@ else:
 # Footer lucu
 # ==========================
 st.markdown("---")
-st.caption("🐾 Dibuat oleh Mulya Syira — Dashboard lucu tapi cerdas menggunakan Streamlit, YOLO & TensorFlow.")
+st.caption("🐾 Dibuat oleh Mulya Syira — Dashboard lucu tapi cerdas menggunakan Streamlit, YOLO & TensorFlow.")
