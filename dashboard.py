@@ -5,6 +5,7 @@ from tensorflow.keras.preprocessing import image
 import numpy as np
 from PIL import Image
 import time
+import os
 
 # ==========================
 # Konfigurasi Dashboard
@@ -12,19 +13,24 @@ import time
 st.set_page_config(page_title="CuteVision App", page_icon="🐾", layout="wide")
 
 # ==========================
-# CSS Kustom (Tema Pastel Ungu-Pink)
+# CSS (Tema Pastel Ungu-Pink + Background)
 # ==========================
 st.markdown("""
     <style>
+    /* Background utama */
     .main {
-        background-color: #FAF7FF;
+        background: linear-gradient(135deg, #FAF7FF 0%, #FFF0F5 100%);
     }
-    .stSidebar {
+    /* Sidebar */
+    [data-testid="stSidebar"] {
         background-color: #F4EAFB;
     }
+    /* Heading */
     h1, h2, h3, h4, h5 {
         color: #4B2E83;
+        font-family: "Poppins", sans-serif;
     }
+    /* Tombol */
     .stButton>button {
         background-color: #CDB4DB;
         color: white;
@@ -36,6 +42,12 @@ st.markdown("""
         background-color: #B5838D;
         color: #fff;
     }
+    /* File uploader area */
+    div[data-testid="stFileUploaderDropzone"] {
+        border: 2px dashed #B5838D;
+        border-radius: 15px;
+        background-color: #FFF8FB;
+    }
     </style>
 """, unsafe_allow_html=True)
 
@@ -44,7 +56,7 @@ st.markdown("""
 # ==========================
 @st.cache_resource
 def load_models():
-    yolo_model = YOLO("model/Mulya Syira_Laporan 4.pt")  # Ganti path sesuai model kamu
+    yolo_model = YOLO("model/Mulya Syira_Laporan 4.pt")
     classifier = tf.keras.models.load_model("model/Mulya Syira_Laporan2.h5")
     return yolo_model, classifier
 
@@ -67,11 +79,33 @@ st.write("Aplikasi ini menggunakan YOLO untuk mendeteksi objek dan CNN (TensorFl
          "Cocok untuk kamu yang suka hal-hal lucu tapi tetap cerdas!")
 
 # ==========================
+# Contoh Gambar per Mode
+# ==========================
+if mode == "Deteksi Objek (YOLO)":
+    st.subheader("🪄 Contoh Deteksi Objek")
+    st.markdown("Mode ini digunakan untuk **mendeteksi objek seperti gambar CocoPham & Sprite** menggunakan YOLO.")
+    col1, col2 = st.columns(2)
+    with col1:
+        st.image("contoh/cocopham.jpg", caption="Contoh Gambar: CocoPham", use_container_width=True)
+    with col2:
+        st.image("contoh/sprite.jpg", caption="Contoh Gambar: Sprite", use_container_width=True)
+else:
+    st.subheader("🔬 Contoh Klasifikasi Gambar")
+    st.markdown("Mode ini digunakan untuk **mengklasifikasikan gambar sel**, seperti **Uninfected** dan **Parasitized** menggunakan CNN.")
+    col1, col2 = st.columns(2)
+    with col1:
+        st.image("contoh/uninfected.png", caption="Sel Uninfected", use_container_width=True)
+    with col2:
+        st.image("contoh/parasitized.png", caption="Sel Parasitized", use_container_width=True)
+
+st.write("---")
+
+# ==========================
 # Upload Gambar
 # ==========================
 uploaded_file = st.file_uploader("📤 Unggah Gambar di Sini", type=["jpg", "jpeg", "png"])
 
-if uploaded_file is not None:
+if uploaded_file is not None and yolo_model is not None and classifier is not None:
     image_pil = Image.open(uploaded_file)
     col1, col2 = st.columns(2)
 
@@ -91,8 +125,7 @@ if uploaded_file is not None:
             with col2:
                 st.subheader("🎯 Hasil Deteksi Objek")
                 st.image(results[0].plot(), use_container_width=True)
-                st.success("AI berhasil mendeteksi objek di gambar kamu!")
-
+                st.success("AI berhasil mendeteksi objek seperti CocoPham atau Sprite!")
         else:
             img = image_pil.resize((150, 150))
             x = image.img_to_array(img)
@@ -104,7 +137,7 @@ if uploaded_file is not None:
             with col2:
                 st.subheader("🧠 Hasil Klasifikasi")
                 st.image(image_pil, use_container_width=True)
-                st.success(f"Gambar ini termasuk ke dalam kelas **{label}**.")
+                st.success(f"Gambar ini termasuk ke dalam kelas **{label}** (contohnya seperti sel Uninfected atau Parasitized).")
 else:
     st.info("Silakan unggah gambar terlebih dahulu untuk mulai.")
 
