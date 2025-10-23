@@ -128,7 +128,7 @@ if menu in ["Deteksi Objek (YOLO)", "Klasifikasi Gambar"]:
                         confidence = np.max(prediction)
 
                         # 🔸 Mapping label sesuai urutan waktu training
-                        labels = ["Indoor", "Outdoor"]  # ubah urutannya sesuai class_indices saat training
+                        labels = ["Uninfected", "Parasitized"]  # ubah urutannya sesuai class_indices saat training
                         predicted_label = labels[class_index]
 
                         # Tampilkan hasil prediksi
