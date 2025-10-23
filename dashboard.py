@@ -20,9 +20,25 @@ yolo_model, classifier = load_models()
 # ==========================
 # Tampilan Dashboard
 # ==========================
-st.set_page_config(page_title="CuteVision App", page_icon="🐱", layout="centered")
+st.set_page_config(page_title="Deteksi Objek dan Klasifikasi Gambar", page_icon="🐱", layout="centered")
 
-st.title("🐾 CuteVision App — Deteksi & Klasifikasi Gambar Lucu")
+# Ubah warna latar belakang menjadi pastel
+st.markdown(
+    """
+    <style>
+        body {
+            background-color: #FFF1E6; /* Pastel peach */
+        }
+        .stButton>button {
+            background-color: #FFDAC1; /* Pastel button */
+        }
+        .css-1d391kg {padding-top: 2rem;} /* Tambah jarak atas agar lebih rapi */
+    </style>
+    """,
+    unsafe_allow_html=True
+)
+
+st.title("🐾 Deteksi Objek dan Klasifikasi Gambar")
 st.markdown("Aplikasi ini menggunakan YOLO untuk mendeteksi objek dan CNN (TensorFlow) untuk mengklasifikasi gambar. Cocok untuk yang suka hal-hal lucu tapi tetap cerdas!")
 
 menu = st.sidebar.radio("🌈 Pilih Mode:", ["🎯 Deteksi Objek (YOLO)", "🧩 Klasifikasi Gambar"])
@@ -42,6 +58,7 @@ if uploaded_file is not None:
     # MODE DETEKSI OBJEK
     # ==========================
     if menu == "🎯 Deteksi Objek (YOLO)":
+        st.info("ℹ️ Untuk deteksi objek, gunakan gambar Cocopham & Sprite agar hasil lebih akurat!")
         with st.spinner("🐱 Sedang mendeteksi objek... tunggu sebentar ya!"):
             # Konversi ke OpenCV
             img_cv = np.array(img.convert("RGB"))
@@ -94,6 +111,7 @@ if uploaded_file is not None:
     # MODE KLASIFIKASI GAMBAR
     # ==========================
     elif menu == "🧩 Klasifikasi Gambar":
+        st.info("ℹ️ Untuk klasifikasi gambar, gunakan gambar sel: Uninfected & Parasitized agar hasil lebih akurat!")
         with st.spinner("🐶 Sedang memprediksi jenis gambar..."):
             img_resized = img.resize((128, 128))
             img_array = image.img_to_array(img_resized)
