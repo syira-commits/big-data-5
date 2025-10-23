@@ -44,8 +44,8 @@ st.markdown("""
 # ==========================
 @st.cache_resource
 def load_models():
-    yolo_model = YOLO("model/Mulya_Syira_Laporan4.pt")  # Ganti path sesuai model kamu
-    classifier = tf.keras.models.load_model("model/Mulya_Syira_Classifier.h5")
+    yolo_model = YOLO("model/Mulya Syira_Laporan 4.pt")  # Ganti path sesuai model kamu
+    classifier = tf.keras.models.load_model("model/Mulya Syira_Laporan2.h5")
     return yolo_model, classifier
 
 yolo_model, classifier = load_models()
